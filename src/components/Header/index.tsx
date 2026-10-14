@@ -64,7 +64,7 @@ const Header = () => {
           <div className="xl:w-auto flex-col sm:flex-row w-full flex sm:justify-between sm:items-center gap-5 sm:gap-10">
             <Link className="flex-shrink-0" href="/">
               <Image
-                src="/images/logo/logo.svg"
+                src="/images/logo/logo-car.png"
                 alt="Logo"
                 width={219}
                 height={36}
@@ -323,7 +323,7 @@ const Header = () => {
                           {menuItem.title}
                         </Link>
                       </li>
-                    )
+                    ),
                   )}
                 </ul>
               </nav>

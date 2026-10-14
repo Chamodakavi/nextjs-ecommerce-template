@@ -15,10 +15,10 @@ const Home = () => {
       <Categories />
       <NewArrival />
       <PromoBanner />
-      <BestSeller />
       <CounDown />
-      <Testimonials />
-      <Newsletter />
+      <BestSeller />
+      {/* <Testimonials /> */}
+      {/* <Newsletter /> */}
     </main>
   );
 };

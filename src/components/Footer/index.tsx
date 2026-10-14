@@ -81,7 +81,7 @@ const Footer = () => {
                       fill="#3C50E0"
                     />
                   </svg>
-                  support@example.com
+                  binoshrandula@gmail.com
                 </a>
               </li>
             </ul>
@@ -264,7 +264,7 @@ const Footer = () => {
             </ul>
           </div>
 
-          <div className="w-full sm:w-auto">
+          {/* <div className="w-full sm:w-auto">
             <h2 className="mb-7.5 text-custom-1 font-medium text-dark lg:text-right">
               Download App
             </h2>
@@ -328,7 +328,7 @@ const Footer = () => {
                 </a>
               </li>
             </ul>
-          </div>
+          </div> */}
         </div>
         {/* <!-- footer menu end --> */}
       </div>
@@ -338,7 +338,8 @@ const Footer = () => {
         <div className="max-w-[1170px] mx-auto px-4 sm:px-8 xl:px-0">
           <div className="flex gap-5 flex-wrap items-center justify-between">
             <p className="text-dark font-medium">
-              &copy; {year}. All rights reserved by PimjoLabs.
+              &copy; {year}. All rights reserved by Premier Auto Hub. Designed
+              by{" Team Webtend."}
             </p>
 
             <div className="flex flex-wrap items-center gap-4">
