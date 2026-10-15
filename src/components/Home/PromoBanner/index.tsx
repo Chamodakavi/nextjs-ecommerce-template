@@ -16,7 +16,7 @@ const PromoBanner = () => {
               UP TO 30% OFF
             </h2>
 
-            <p>
+            <p className="hidden md:block">
               iPhone 14 has the same superspeedy chip that’s in iPhone 13 Pro,
               A15 Bionic, with a 5‑core GPU, powers all the latest features.
             </p>
@@ -50,7 +50,7 @@ const PromoBanner = () => {
             />
 
             <div className="text-right">
-              <span className="block text-lg text-dark mb-1.5">
+              <span className="block text-lg text-dark mb-1.5 hidden md:block">
                 Foldable Motorised Treadmill
               </span>
 
@@ -90,7 +90,7 @@ const PromoBanner = () => {
                 Up to <span className="text-orange">40%</span> off
               </h2>
 
-              <p className="max-w-[285px] text-custom-sm">
+              <p className="max-w-[285px] text-custom-sm hidden md:block">
                 The aerospace-grade titanium case strikes the perfect balance of
                 everything.
               </p>

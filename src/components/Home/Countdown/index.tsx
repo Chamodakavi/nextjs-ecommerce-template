@@ -39,7 +39,7 @@ const CounDown = () => {
               Enhance Your Music Experience
             </h2>
 
-            <p>The Havit H206d is a wired PC headphone.</p>
+            {/* <p>The Havit H206d is a wired PC headphone.</p> */}
 
             {/* <!-- Countdown timer --> */}
             <div
@@ -115,14 +115,14 @@ const CounDown = () => {
           <Image
             src="/images/countdown/countdown-bg.png"
             alt="bg shapes"
-            className="hidden sm:block absolute right-0 bottom-0 -z-1"
+            className=" sm:block absolute right-0 bottom-0 -z-1"
             width={737}
             height={482}
           />
           <Image
             src="/images/countdown/countdown-01.png"
             alt="product"
-            className="hidden lg:block absolute right-4 xl:right-33 bottom-4 xl:bottom-10 -z-1"
+            className=" lg:block absolute right-4 xl:right-33 bottom-4 xl:bottom-10 -z-1"
             width={411}
             height={376}
           />
