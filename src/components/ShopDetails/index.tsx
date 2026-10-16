@@ -1,11 +1,14 @@
 "use client";
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import Breadcrumb from "../Common/Breadcrumb";
 import Image from "next/image";
 import Newsletter from "../Common/Newsletter";
 import RecentlyViewdItems from "./RecentlyViewd";
 import { usePreviewSlider } from "@/app/context/PreviewSliderContext";
-import { useAppSelector } from "@/redux/store";
+import { AppDispatch, useAppSelector } from "@/redux/store";
+import { useDispatch } from "react-redux";
+import { addItemToCart } from "@/redux/features/cart-slice";
 
 const ShopDetails = () => {
   const [activeColor, setActiveColor] = useState("blue");
@@ -75,28 +78,81 @@ const ShopDetails = () => {
 
   const colors = ["red", "blue", "orange", "pink", "purple"];
 
-  const alreadyExist = localStorage.getItem("productDetails");
-  const productFromStorage = useAppSelector(
+  const dispatch = useDispatch<AppDispatch>();
+  const productFromRedux = useAppSelector(
     (state) => state.productDetailsReducer.value
   );
 
-  const product = alreadyExist ? JSON.parse(alreadyExist) : productFromStorage;
+  const [product, setProduct] = useState<any>(productFromRedux);
 
   useEffect(() => {
-    localStorage.setItem("productDetails", JSON.stringify(product));
-  }, [product]);
+    if (productFromRedux) {
+      setProduct(productFromRedux);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("productDetails", JSON.stringify(productFromRedux));
+      }
+    } else if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("productDetails");
+      if (saved) {
+        try {
+          setProduct(JSON.parse(saved));
+        } catch {
+          // ignore invalid json
+        }
+      }
+    }
+  }, [productFromRedux]);
 
   // pass the product here when you get the real data.
   const handlePreviewSlider = () => {
     openPreviewModal();
   };
 
+  const productImages: string[] =
+    product?.image_urls && product.image_urls.length > 0
+      ? product.image_urls
+      : product?.image_url
+        ? [product.image_url]
+        : product?.imgs?.previews || product?.imgs?.thumbnails || [
+            "/images/products/product-placeholder.png",
+          ];
+
+  const currentPreviewImage = productImages[previewImg] || productImages[0];
+  const productName = product?.name || product?.title || "Product Details";
+  const productPrice = Number(product?.selling_price || product?.discountedPrice || product?.price || 0);
+  const originalPrice = Number(product?.cost_price || product?.price || 0);
+
+  const handleAddToCart = () => {
+    if (!product) return;
+    dispatch(
+      addItemToCart({
+        ...product,
+        id: product.id,
+        title: productName,
+        price: originalPrice || productPrice,
+        discountedPrice: productPrice,
+        quantity,
+      } as any)
+    );
+  };
+
   return (
     <>
       <Breadcrumb title={"Shop Details"} pages={["shop details"]} />
 
-      {product.title === "" ? (
-        "Please add product"
+      {!product ? (
+        <div className="max-w-[1170px] mx-auto px-4 py-20 text-center">
+          <h2 className="text-2xl font-bold text-dark mb-4">No Product Selected</h2>
+          <p className="text-gray-500 mb-6">
+            Please select a product from our catalog to view detailed specifications.
+          </p>
+          <Link
+            href="/shop-with-sidebar"
+            className="inline-flex font-medium text-white bg-blue py-3 px-8 rounded-md transition hover:bg-blue-dark"
+          >
+            Browse Products
+          </Link>
+        </div>
       ) : (
         <>
           <section className="overflow-hidden relative pb-20 pt-5 lg:pt-20 xl:pt-28">
@@ -127,44 +183,44 @@ const ShopDetails = () => {
                         </svg>
                       </button>
 
-                      {product.imgs?.previews?.[previewImg] && (
-                        <Image
-                          src={product.imgs.previews[previewImg]}
-                          alt="products-details"
-                          width={400}
-                          height={400}
-                        />
-                      )}
+                      <Image
+                        src={currentPreviewImage}
+                        alt={productName}
+                        width={400}
+                        height={400}
+                        className="object-contain max-h-[400px]"
+                      />
                     </div>
                   </div>
 
-                  {/* ?  &apos;border-blue &apos; :  &apos;border-transparent&apos; */}
-                  <div className="flex flex-wrap sm:flex-nowrap gap-4.5 mt-6">
-                    {product.imgs?.thumbnails.map((item, key) => (
-                      <button
-                        onClick={() => setPreviewImg(key)}
-                        key={key}
-                        className={`flex items-center justify-center w-15 sm:w-25 h-15 sm:h-25 overflow-hidden rounded-lg bg-gray-2 shadow-1 ease-out duration-200 border-2 hover:border-blue ${key === previewImg
-                          ? "border-blue"
-                          : "border-transparent"
+                  {productImages.length > 1 && (
+                    <div className="flex flex-wrap sm:flex-nowrap gap-4.5 mt-6">
+                      {productImages.map((item, key) => (
+                        <button
+                          onClick={() => setPreviewImg(key)}
+                          key={key}
+                          className={`flex items-center justify-center w-15 sm:w-25 h-15 sm:h-25 overflow-hidden rounded-lg bg-gray-2 shadow-1 ease-out duration-200 border-2 hover:border-blue ${
+                            key === previewImg ? "border-blue" : "border-transparent"
                           }`}
-                      >
-                        <Image
-                          width={50}
-                          height={50}
-                          src={item}
-                          alt="thumbnail"
-                        />
-                      </button>
-                    ))}
-                  </div>
+                        >
+                          <Image
+                            width={50}
+                            height={50}
+                            src={item}
+                            alt="thumbnail"
+                            className="object-contain"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* <!-- product content --> */}
                 <div className="max-w-[539px] w-full">
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="font-semibold text-xl sm:text-2xl xl:text-custom-3 text-dark">
-                      {product.title}
+                      {productName}
                     </h2>
 
                     <div className="inline-flex font-medium text-custom-sm text-white bg-blue rounded py-0.5 px-2.5">
@@ -316,12 +372,14 @@ const ShopDetails = () => {
 
                   <h3 className="font-medium text-custom-1 mb-4.5">
                     <span className="text-sm sm:text-base text-dark">
-                      Price: ${product.price}
+                      Price: Rs. {productPrice.toLocaleString()}
                     </span>
-                    <span className="line-through">
-                      {" "}
-                      ${product.discountedPrice}{" "}
-                    </span>
+                    {originalPrice > productPrice && (
+                      <span className="line-through text-dark-4 ml-2">
+                        {" "}
+                        Rs. {originalPrice.toLocaleString()}{" "}
+                      </span>
+                    )}
                   </h3>
 
                   <ul className="flex flex-col gap-2">
@@ -664,12 +722,13 @@ const ShopDetails = () => {
                         </button>
                       </div>
 
-                      <a
-                        href="#"
+                      <button
+                        type="button"
+                        onClick={handleAddToCart}
                         className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark"
                       >
-                        Purchase Now
-                      </a>
+                        Add to Cart
+                      </button>
 
                       <a
                         href="#"

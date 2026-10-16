@@ -20,6 +20,18 @@ import { WebCountdownProvider } from "@/context/WebCountdownContext";
 import { NewArrivalProvider } from "@/context/NewArrivalContext";
 import ClientLayout from "@/components/ClientLayout/ClientLayout";
 import { ProductProvider } from "@/context/ProductContext";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: {
+    default: "NextMerce | Next.js eCommerce Store",
+    template: "%s | NextMerce",
+  },
+  description:
+    "Modern high-performance eCommerce template built with Next.js, Redux Toolkit, Tailwind CSS, and Supabase.",
+};
+
+export const dynamic = "force-dynamic";
 
 export default async function RootLayout({
   children,
