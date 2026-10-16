@@ -51,15 +51,9 @@ const ProductItem = ({ item }: { item: Product }) => {
     );
   };
 
+  // Directly pass the clean Supabase Product payload to Redux
   const handleProductDetails = () => {
-    dispatch(
-      updateproductDetails({
-        ...item,
-        title: item.name,
-        price: Number(item.cost_price || item.selling_price),
-        discountedPrice: Number(item.selling_price),
-      }),
-    );
+    dispatch(updateproductDetails(item));
   };
 
   // Display image fallback logic
