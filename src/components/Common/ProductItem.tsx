@@ -22,31 +22,44 @@ const ProductItem = ({ item }: { item: Product }) => {
     openModal();
   };
 
-  // Add to cart without opening the modal
+  // Add to cart with mapped properties matching CartItem
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     dispatch(
       addItemToCart({
         ...item,
+        title: item.name,
+        price: Number(item.cost_price || item.selling_price),
+        discountedPrice: Number(item.selling_price),
         quantity: 1,
-      }),
+      } as any),
     );
   };
 
-  // Add to wishlist without opening the modal
+  // Add to wishlist with mapped properties matching WishlistItem
   const handleItemToWishList = (e: React.MouseEvent) => {
     e.stopPropagation();
     dispatch(
       addItemToWishlist({
         ...item,
-        status: "available",
+        title: item.name,
+        price: Number(item.cost_price || item.selling_price),
+        discountedPrice: Number(item.selling_price),
+        status: item.availability_status || "available",
         quantity: 1,
-      }),
+      } as any),
     );
   };
 
   const handleProductDetails = () => {
-    dispatch(updateproductDetails({ ...item }));
+    dispatch(
+      updateproductDetails({
+        ...item,
+        title: item.name,
+        price: Number(item.cost_price || item.selling_price),
+        discountedPrice: Number(item.selling_price),
+      }),
+    );
   };
 
   // Display image fallback logic
@@ -72,7 +85,7 @@ const ProductItem = ({ item }: { item: Product }) => {
           />
         </div>
 
-        {/* Hover action bar (Without eye icon) */}
+        {/* Hover action bar */}
         <div className="absolute left-0 bottom-0 translate-y-full w-full flex items-center justify-center gap-2.5 pb-5 ease-linear duration-200 group-hover:translate-y-0 z-10">
           <button
             type="button"
