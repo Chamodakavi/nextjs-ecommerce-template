@@ -141,13 +141,13 @@ const QuickViewModal = () => {
 
               {/* Main Active Preview */}
               <div className="relative z-1 overflow-hidden flex items-center justify-center w-full min-h-[300px] sm:min-h-[460px] bg-gray-1 rounded-lg border border-gray-3 p-4">
-                <button
+                {/* <button
                   onClick={handlePreviewSlider}
                   aria-label="Zoom image"
                   className="w-10 h-10 rounded-[5px] bg-white shadow-1 flex items-center justify-center transition-colors duration-200 text-dark hover:text-blue absolute top-4 right-4 z-10"
                 >
                   <Maximize2 className="w-4 h-4" />
-                </button>
+                </button> */}
 
                 <div className="relative w-full h-[280px] sm:h-[400px]">
                   <Image
