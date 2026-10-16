@@ -76,8 +76,11 @@ const QuickViewModal = () => {
     dispatch(
       addItemToCart({
         ...product,
+        title: product.name,
+        price: Number(product.cost_price || product.selling_price),
+        discountedPrice: Number(product.selling_price),
         quantity,
-      }),
+      } as any),
     );
     closeModal();
   };
@@ -86,9 +89,12 @@ const QuickViewModal = () => {
     dispatch(
       addItemToWishlist({
         ...product,
-        status: "available",
+        title: product.name,
+        price: Number(product.cost_price || product.selling_price),
+        discountedPrice: Number(product.selling_price),
+        status: product.availability_status || "available",
         quantity: 1,
-      }),
+      } as any),
     );
   };
 
