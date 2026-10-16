@@ -23,3 +23,60 @@ export interface WebData {
   logoUrl?: string;
   site_name?: string;
 }
+
+// Main hero carousel slide structure
+export interface WebCarousel {
+  id: string | number;
+  link: string;
+  title: string;
+  imageUrl: string;
+  isActive: boolean;
+  buttonText: string;
+  description: string;
+  discountText: string;
+}
+
+// Right-side promotional card structure
+export interface PromoCard {
+  id: string | number;
+  title: string;
+  badgeText: string;
+  salePrice: number;
+  regularPrice: number;
+  link: string;
+  imageUrl: string;
+  isActive: boolean;
+}
+
+// Combined structure containing both carousel slides and promo cards
+export interface HeroSectionData {
+  slides: WebCarousel[];
+  promos: PromoCard[];
+}
+
+export interface BigBanner {
+  link: string;
+  title: string;
+  imageUrl: string;
+  isActive: boolean;
+  subtitle: string;
+  buttonText: string;
+  description: string;
+}
+
+export interface PromoSecCard {
+  id: string | number;
+  link: string;
+  title: string;
+  imageUrl: string;
+  isActive: boolean;
+  subtitle: string;
+  buttonText: string;
+  description?: string;
+  highlightText: string;
+}
+
+export interface PromoBannersData {
+  bigBanner?: BigBanner;
+  smallBanners?: PromoSecCard[];
+}

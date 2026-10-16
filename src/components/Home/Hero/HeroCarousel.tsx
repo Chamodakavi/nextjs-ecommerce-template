@@ -7,105 +7,80 @@ import "swiper/css/pagination";
 import "swiper/css";
 
 import Image from "next/image";
+import Link from "next/link";
+import { useWebData } from "@/context/WebCarouselContext";
 
 const HeroCarousal = () => {
+  const { slides } = useWebData();
+
+  // Filter out any slides where isActive is false
+  const activeSlides = slides?.filter((slide) => slide.isActive);
+
+  if (!activeSlides || activeSlides.length === 0) {
+    return null;
+  }
+
   return (
     <Swiper
       spaceBetween={30}
       centeredSlides={true}
       autoplay={{
-        delay: 2500,
+        delay: 3500,
         disableOnInteraction: false,
       }}
       pagination={{
         clickable: true,
       }}
       modules={[Autoplay, Pagination]}
-      className="hero-carousel"
+      className="hero-carousel w-full h-full"
     >
-      <SwiperSlide>
-        <div className="flex items-center pt-6 sm:pt-0 flex-col-reverse sm:flex-row">
-          <div className="max-w-[394px] py-10 sm:py-15 lg:py-24.5 pl-4 sm:pl-7.5 lg:pl-12.5">
-            <div className="flex items-center gap-4 mb-7.5 sm:mb-10">
-              <span className="block font-semibold text-heading-3 sm:text-heading-1 text-black">
-                30%
-              </span>
-              <span className="block text-dark text-sm sm:text-custom-1 sm:leading-[24px]">
-                Sale
-                <br />
-                Off
-              </span>
+      {activeSlides.map((slide, index) => (
+        <SwiperSlide key={slide.id || index}>
+          <div className="flex items-center justify-between min-h-[380px] sm:min-h-[460px] pt-6 sm:pt-0 flex-col-reverse sm:flex-row px-6 sm:px-10 lg:px-16 gap-8">
+            {/* Left Content Column */}
+            <div className="w-full sm:max-w-[500px] py-6 sm:py-10 z-10">
+              <div className="flex items-center gap-4 mb-5 sm:mb-8">
+                <span className="block font-bold text-heading-3 sm:text-heading-1 text-blue">
+                  {slide.discountText}
+                </span>
+                <span className="block text-dark font-medium text-sm sm:text-base leading-tight">
+                  Sale
+                  <br />
+                  Off
+                </span>
+              </div>
+
+              <h1 className="font-bold text-dark text-2xl sm:text-4xl lg:text-5xl mb-4 leading-tight">
+                <Link href={slide.link || "#"}>{slide.title}</Link>
+              </h1>
+
+              <p className="text-body-color text-sm sm:text-base mb-8 max-w-[460px] line-clamp-3">
+                {slide.description}
+              </p>
+
+              <Link
+                href={slide.link || "#"}
+                className="inline-flex items-center justify-center font-medium text-white text-sm sm:text-base rounded-md bg-dark py-3.5 px-8 transition-colors duration-200 hover:bg-blue shadow-md"
+              >
+                {slide.buttonText || "Shop Now"}
+              </Link>
             </div>
 
-            <h1 className="font-semibold text-dark text-xl sm:text-3xl mb-3">
-              <a href="#">True Wireless Noise Cancelling Headphone</a>
-            </h1>
-
-            <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi at
-              ipsum at risus euismod lobortis in
-            </p>
-
-            <a
-              href="#"
-              className="inline-flex font-medium text-white text-custom-sm rounded-md bg-gray-6 py-3 px-9 ease-out duration-200 hover:bg-black hover:text-white mt-10"
-            >
-              Shop Now
-            </a>
+            {/* Right Image Column */}
+            {slide.imageUrl && (
+              <div className="relative w-full sm:w-[48%] h-[240px] sm:h-[340px] lg:h-[400px] flex items-center justify-center z-10">
+                <Image
+                  src={slide.imageUrl}
+                  alt={slide.title || "Hero banner"}
+                  fill
+                  priority={index === 0}
+                  className="object-contain"
+                />
+              </div>
+            )}
           </div>
-
-          <div>
-            <Image
-              src="/images/hero/hero-001.png"
-              alt="headphone"
-              width={351}
-              height={358}
-            />
-          </div>
-        </div>
-      </SwiperSlide>
-      <SwiperSlide>
-        {" "}
-        <div className="flex items-center pt-6 sm:pt-0 flex-col-reverse sm:flex-row">
-          <div className="max-w-[394px] py-10 sm:py-15 lg:py-26 pl-4 sm:pl-7.5 lg:pl-12.5">
-            <div className="flex items-center gap-4 mb-7.5 sm:mb-10">
-              <span className="block font-semibold text-heading-3 sm:text-heading-1 text-black">
-                30%
-              </span>
-              <span className="block text-dark text-sm sm:text-custom-1 sm:leading-[24px]">
-                Sale
-                <br />
-                Off
-              </span>
-            </div>
-
-            <h1 className="font-semibold text-dark text-xl sm:text-3xl mb-3">
-              <a href="#">True Wireless Noise Cancelling Headphone</a>
-            </h1>
-
-            <p>
-              Lorem ipsum dolor sit, consectetur elit nunc suscipit non ipsum
-              nec suscipit.
-            </p>
-
-            <a
-              href="#"
-              className="inline-flex font-medium text-white text-custom-sm rounded-md bg-gray-6 py-3 px-9 ease-out duration-200 hover:bg-black hover:text-white mt-10"
-            >
-              Shop Now
-            </a>
-          </div>
-
-          <div>
-            <Image
-              src="/images/hero/hero-002.webp"
-              alt="headphone"
-              width={351}
-              height={358}
-            />
-          </div>
-        </div>
-      </SwiperSlide>
+        </SwiperSlide>
+      ))}
     </Swiper>
   );
 };
