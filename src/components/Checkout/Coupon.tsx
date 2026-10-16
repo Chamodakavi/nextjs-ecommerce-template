@@ -17,7 +17,7 @@ const Coupon = () => {
       </div>
 
       <div className="py-8 px-4 sm:px-8.5">
-        <form onSubmit={handleApplyCoupon} className="flex gap-4">
+        <div className="flex gap-4">
           <input
             type="text"
             name="coupon"
@@ -29,12 +29,13 @@ const Coupon = () => {
           />
 
           <button
-            type="submit"
+            type="button"
+            onClick={handleApplyCoupon}
             className="inline-flex font-medium text-white bg-blue py-3 px-6 rounded-md ease-out duration-200 hover:bg-blue-dark"
           >
             Apply
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );

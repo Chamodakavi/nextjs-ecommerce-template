@@ -31,18 +31,27 @@ const SingleItem = ({ item }) => {
     }
   };
 
+  const displayImage =
+    item.image_url ||
+    (item.image_urls && item.image_urls[0]) ||
+    item.img ||
+    item.imgs?.thumbnails?.[0] ||
+    "/images/products/product-placeholder.png";
+
+  const itemPrice = item.discountedPrice || item.selling_price || item.price || 0;
+
   return (
     <div className="flex items-center border-t border-gray-3 py-5 px-7.5">
       <div className="min-w-[400px]">
         <div className="flex items-center justify-between gap-5">
           <div className="w-full flex items-center gap-5.5">
-            <div className="flex items-center justify-center rounded-[5px] bg-gray-2 max-w-[80px] w-full h-17.5">
-              <Image width={200} height={200} src={item.imgs?.thumbnails[0]} alt="product" />
+            <div className="relative flex items-center justify-center rounded-[5px] bg-gray-2 max-w-[80px] w-full h-17.5 overflow-hidden">
+              <Image width={80} height={70} src={displayImage} alt={item.title || item.name || "product"} className="object-contain p-1" />
             </div>
 
             <div>
               <h3 className="text-dark ease-out duration-200 hover:text-blue">
-                <a href="#"> {item.title} </a>
+                <a href={`/shop/${item.custom_product_id || item.id}`}> {item.title || item.name} </a>
               </h3>
             </div>
           </div>
@@ -50,7 +59,7 @@ const SingleItem = ({ item }) => {
       </div>
 
       <div className="min-w-[180px]">
-        <p className="text-dark">${item.discountedPrice}</p>
+        <p className="text-dark">Rs. {Number(itemPrice).toLocaleString()}</p>
       </div>
 
       <div className="min-w-[275px]">
@@ -106,7 +115,7 @@ const SingleItem = ({ item }) => {
       </div>
 
       <div className="min-w-[200px]">
-        <p className="text-dark">${item.discountedPrice * quantity}</p>
+        <p className="text-dark">Rs. {Number(itemPrice * quantity).toLocaleString()}</p>
       </div>
 
       <div className="min-w-[50px] flex justify-end">
