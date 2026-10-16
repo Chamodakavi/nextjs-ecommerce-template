@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { WebCarousel, WebData } from "@/types/webData";
-import { PromoCard, PromoSecCard } from "@/types/webData";
+import { WebCarousel, WebData, PromoCard, PromoSecCard } from "@/types/webData";
 
 export async function getWebData(): Promise<WebData | null> {
   const supabase = await createClient();
@@ -43,23 +42,16 @@ export async function getHeroData(): Promise<HeroSectionData> {
 
   if (error) {
     console.error("Error fetching hero section data:", error);
-    return {
-      slides: [],
-      promos: [],
-    };
+    return { slides: [], promos: [] };
   }
 
   return {
-    slides: (data?.carousel_slides as WebCarousel[]) || [],
-    promos: (data?.promo_cards as PromoCard[]) || [],
+    slides: (data?.carousel_slides as WebCarousel[]) ?? [],
+    promos: (data?.promo_cards as PromoCard[]) ?? [],
   };
 }
 
-export interface PromoSectionData {
-  promos: PromoSecCard[];
-}
-
-export async function getPromoData(): Promise<PromoSectionData> {
+export async function getPromoData(): Promise<PromoSecCard[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -70,12 +62,8 @@ export async function getPromoData(): Promise<PromoSectionData> {
 
   if (error) {
     console.error("Error fetching promo section data:", error);
-    return {
-      promos: [],
-    };
+    return [];
   }
 
-  return {
-    promos: (data?.promo_banners as PromoSecCard[]) || [],
-  };
+  return (data?.promo_banners as PromoSecCard[]) ?? [];
 }

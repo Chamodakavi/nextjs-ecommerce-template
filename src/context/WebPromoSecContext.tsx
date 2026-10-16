@@ -1,25 +1,23 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import { PromoBannersData } from "@/types/webData";
+import type { PromoSecCard } from "@/types/webData";
 
-const WebPromoSecContext = createContext<PromoBannersData>({
-  bigBanner: undefined,
-  smallBanners: [],
-});
-
-export function WebPromoProvider({
-  children,
-  promos,
-}: {
+interface WebPromoProviderProps {
   children: React.ReactNode;
-  promos: PromoBannersData;
-}) {
+  promos: PromoSecCard[];
+}
+
+const WebPromoSecContext = createContext<PromoSecCard[]>([]);
+
+export function WebPromoProvider({ children, promos }: WebPromoProviderProps) {
   return (
-    <WebPromoSecContext.Provider value={promos}>
+    <WebPromoSecContext.Provider value={promos ?? []}>
       {children}
     </WebPromoSecContext.Provider>
   );
 }
 
-export const usePromoSecData = () => useContext(WebPromoSecContext);
+export function usePromoSecData() {
+  return useContext(WebPromoSecContext);
+}
