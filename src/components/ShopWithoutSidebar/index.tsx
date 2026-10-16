@@ -6,10 +6,12 @@ import SingleGridItem from "../Shop/SingleGridItem";
 import SingleListItem from "../Shop/SingleListItem";
 import CustomSelect from "../ShopWithSidebar/CustomSelect";
 
-import shopData from "../Shop/shopData";
+import { useProducts } from "@/context/ProductContext";
 
 const ShopWithoutSidebar = () => {
   const [productStyle, setProductStyle] = useState("grid");
+
+  const shopData = useProducts();
 
   const options = [
     { label: "Latest Products", value: "0" },
@@ -134,7 +136,7 @@ const ShopWithoutSidebar = () => {
                     <SingleGridItem item={item} key={key} />
                   ) : (
                     <SingleListItem item={item} key={key} />
-                  )
+                  ),
                 )}
               </div>
               {/* <!-- Products Grid Tab Content End --> */}
