@@ -3,7 +3,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useDispatch } from "react-redux";
-import { Eye, Heart, Star } from "lucide-react";
+import { Heart, Star } from "lucide-react";
 
 import { Product } from "@/types/product";
 import { useModalContext } from "@/app/context/QuickViewModalContext";
@@ -16,13 +16,15 @@ const SingleGridItem = ({ item }: { item: Product }) => {
   const { openModal } = useModalContext();
   const dispatch = useDispatch<AppDispatch>();
 
-  // update the QuickView state
-  const handleQuickViewUpdate = () => {
+  // Open QuickView modal with current product data
+  const handleOpenDetailModal = () => {
     dispatch(updateQuickView({ ...item }));
+    openModal();
   };
 
-  // add to cart with mapped properties
-  const handleAddToCart = () => {
+  // Add to cart with mapped properties
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
     dispatch(
       addItemToCart({
         ...item,
@@ -34,8 +36,9 @@ const SingleGridItem = ({ item }: { item: Product }) => {
     );
   };
 
-  // add to wishlist with mapped properties
-  const handleItemToWishList = () => {
+  // Add to wishlist with mapped properties
+  const handleItemToWishList = (e: React.MouseEvent) => {
+    e.stopPropagation();
     dispatch(
       addItemToWishlist({
         ...item,
@@ -55,7 +58,7 @@ const SingleGridItem = ({ item }: { item: Product }) => {
     "/images/products/product-placeholder.png";
 
   return (
-    <div className="group">
+    <div onClick={handleOpenDetailModal} className="group cursor-pointer">
       <div className="relative overflow-hidden flex items-center justify-center rounded-lg bg-white shadow-1 min-h-[270px] mb-4">
         <div className="relative w-[220px] h-[220px]">
           <Image
@@ -67,19 +70,8 @@ const SingleGridItem = ({ item }: { item: Product }) => {
           />
         </div>
 
+        {/* Hover Action Controls (Eye icon removed) */}
         <div className="absolute left-0 bottom-0 translate-y-full w-full flex items-center justify-center gap-2.5 pb-5 ease-linear duration-200 group-hover:translate-y-0 z-10">
-          <button
-            onClick={() => {
-              openModal();
-              handleQuickViewUpdate();
-            }}
-            id="newOne"
-            aria-label="button for quick view"
-            className="flex items-center justify-center w-9 h-9 rounded-[5px] shadow-1 ease-out duration-200 text-dark bg-white hover:text-blue"
-          >
-            <Eye className="w-4 h-4 text-current" />
-          </button>
-
           <button
             onClick={handleAddToCart}
             className="inline-flex font-medium text-custom-sm py-[7px] px-5 rounded-[5px] bg-blue text-white ease-out duration-200 hover:bg-blue-dark"
@@ -109,7 +101,10 @@ const SingleGridItem = ({ item }: { item: Product }) => {
       </div>
 
       <h3 className="font-medium text-dark ease-out duration-200 hover:text-blue mb-1.5 line-clamp-1">
-        <Link href={`/shop/${item.custom_product_id || item.id}`}>
+        <Link
+          href={`/shop/${item.custom_product_id || item.id}`}
+          onClick={(e) => e.stopPropagation()}
+        >
           {item.name}
         </Link>
       </h3>

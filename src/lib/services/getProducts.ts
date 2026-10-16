@@ -19,3 +19,19 @@ export async function getNewArrivalProducts(
 
   return data as Product[];
 }
+
+export async function getAllProducts(): Promise<Product[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error || !data) {
+    console.error("Error fetching all products:", error);
+    return [];
+  }
+
+  return data as Product[];
+}
