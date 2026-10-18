@@ -74,7 +74,7 @@ const SingleGridItem = ({ item }: { item: Product }) => {
           />
 
           {/* Hover Quick Actions */}
-          <div className="absolute inset-x-0 bottom-0 z-10 flex translate-y-0 items-center justify-center gap-2 bg-gradient-to-t from-black/40 to-transparent p-2 opacity-100 transition-all duration-200 sm:translate-y-full sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100">
+          <div className="hidden sm:flex absolute inset-x-0 bottom-0 z-10 sm:translate-y-full items-center justify-center gap-2 bg-gradient-to-t from-black/60 to-transparent p-2 sm:opacity-0 transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100">
             <button
               type="button"
               onClick={handleAddToCart}
