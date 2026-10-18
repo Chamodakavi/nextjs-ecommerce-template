@@ -90,7 +90,7 @@ const Footer = ({ webData }: { webData: WebData | null }) => {
             {/* <!-- Social Links end --> */}
           </div>
 
-          <div className="w-full sm:w-auto">
+          <div className="w-full sm:w-auto hidden md:block">
             <h2 className="mb-7.5 text-custom-1 font-medium text-dark">
               Account
             </h2>
@@ -124,7 +124,7 @@ const Footer = ({ webData }: { webData: WebData | null }) => {
             </ul>
           </div>
 
-          <div className="w-full sm:w-auto">
+          <div className="w-full sm:w-auto hidden md:block">
             <h2 className="mb-7.5 text-custom-1 font-medium text-dark">
               Quick Link
             </h2>
@@ -170,7 +170,7 @@ const Footer = ({ webData }: { webData: WebData | null }) => {
               by Team Webtend.
             </p>
 
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="hidden md:flex flex-wrap items-center gap-4">
               <p className="font-medium">We Accept:</p>
 
               <div className="flex flex-wrap items-center gap-6">

@@ -33,7 +33,7 @@ const BestSeller = () => {
         </div>
 
         {/* Best Sellers Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7.5">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-7.5">
           {bestSellers.map((item) => (
             <SingleItem item={item} key={item.id} />
           ))}
@@ -42,7 +42,7 @@ const BestSeller = () => {
         {/* View All Button */}
         <div className="text-center mt-12.5">
           <Link
-            href="/shop-without-sidebar"
+            href="/shop-with-sidebar"
             className="inline-flex font-medium text-custom-sm py-3 px-7 sm:px-12.5 rounded-md border-gray-3 border bg-gray-1 text-dark ease-out duration-200 hover:bg-dark hover:text-white hover:border-transparent transition"
           >
             View All

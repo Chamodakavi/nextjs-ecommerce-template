@@ -67,7 +67,7 @@ const ProductItem = ({ item }: { item: Product }) => {
       {/* Clickable Image Container that triggers detail modal */}
       <div
         onClick={handleOpenDetailModal}
-        className="relative overflow-hidden flex items-center justify-center rounded-lg bg-[#F6F7FB] min-h-[270px] mb-4"
+        className="relative overflow-hidden flex items-center justify-center rounded-lg bg-[#F6F7FB] min-h-[200px] md:min-h-[270px] mb-4"
       >
         <div className="relative w-[220px] h-[220px]">
           <Image

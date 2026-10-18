@@ -1,12 +1,8 @@
 "use client";
+
 import React, { useState, useEffect, useMemo } from "react";
-import {
-  LayoutGrid,
-  List,
-  SlidersHorizontal,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
+
 import Breadcrumb from "../Common/Breadcrumb";
 import CustomSelect, { Option } from "./CustomSelect";
 import CategoryDropdown from "./CategoryDropdown";
@@ -17,19 +13,24 @@ import { useProducts } from "@/context/ProductContext";
 
 const ShopWithSidebar = () => {
   const products = useProducts();
-  const [productStyle, setProductStyle] = useState<"grid" | "list">("grid");
+
+  const [productStyle] = useState<"grid" | "list">("grid");
   const [productSidebar, setProductSidebar] = useState(false);
-  const [stickyMenu, setStickyMenu] = useState(false);
 
-  // --- Filter & Sorting States ---
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [sortOption, setSortOption] = useState<string>("0"); // "0": Latest, "1": Price Low-High, "2": Price High-Low
+  const [sortOption, setSortOption] = useState<string>("0");
 
-  // Dynamic Price Range Defaults
+  // Dynamic price boundaries
   const { minProductPrice, maxProductPrice } = useMemo(() => {
-    if (!products || products.length === 0)
-      return { minProductPrice: 0, maxProductPrice: 100000 };
+    if (!products || products.length === 0) {
+      return {
+        minProductPrice: 0,
+        maxProductPrice: 100000,
+      };
+    }
+
     const prices = products.map((p) => Number(p.selling_price || 0));
+
     return {
       minProductPrice: Math.min(...prices),
       maxProductPrice: Math.max(...prices),
@@ -41,54 +42,59 @@ const ShopWithSidebar = () => {
     maxProductPrice,
   ]);
 
-  // Sync price range boundaries when data arrives
+  // Update price range when products load or change
   useEffect(() => {
     setPriceRange([minProductPrice, maxProductPrice]);
   }, [minProductPrice, maxProductPrice]);
 
-  // Dynamic Category List with Product Counts
+  // Categories with product counts
   const categoriesWithCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    products.forEach((p) => {
-      if (p.category) {
-        counts[p.category] = (counts[p.category] || 0) + 1;
+
+    products.forEach((product) => {
+      if (product.category) {
+        counts[product.category] = (counts[product.category] || 0) + 1;
       }
     });
+
     return Object.entries(counts).map(([name, count]) => ({
       name,
       products: count,
     }));
   }, [products]);
 
-  // Clean / Reset Filters
+  // Reset filters
   const handleResetFilters = () => {
     setSelectedCategory(null);
     setPriceRange([minProductPrice, maxProductPrice]);
     setSortOption("0");
   };
 
-  // Filter & Sort Logic
+  // Filter and sort products
   const filteredProducts = useMemo(() => {
     let result = [...products];
 
-    // Filter by Category
     if (selectedCategory) {
-      result = result.filter((p) => p.category === selectedCategory);
+      result = result.filter(
+        (product) => product.category === selectedCategory,
+      );
     }
 
-    // Filter by Price
-    result = result.filter((p) => {
-      const price = Number(p.selling_price || 0);
+    result = result.filter((product) => {
+      const price = Number(product.selling_price || 0);
+
       return price >= priceRange[0] && price <= priceRange[1];
     });
 
-    // Sorting Logic
     if (sortOption === "1") {
-      result.sort((a, b) => Number(a.selling_price) - Number(b.selling_price));
+      result.sort(
+        (a, b) => Number(a.selling_price || 0) - Number(b.selling_price || 0),
+      );
     } else if (sortOption === "2") {
-      result.sort((a, b) => Number(b.selling_price) - Number(a.selling_price));
+      result.sort(
+        (a, b) => Number(b.selling_price || 0) - Number(a.selling_price || 0),
+      );
     } else {
-      // Default: Latest
       result.sort(
         (a, b) =>
           new Date(b.created_at || 0).getTime() -
@@ -105,168 +111,160 @@ const ShopWithSidebar = () => {
     { label: "Price: High to Low", value: "2" },
   ];
 
-  const handleStickyMenu = () => {
-    if (window.scrollY >= 80) {
-      setStickyMenu(true);
-    } else {
-      setStickyMenu(false);
-    }
-  };
+  // Close sidebar when clicking outside
+  // useEffect(() => {
+  //   if (!productSidebar) return;
 
-  useEffect(() => {
-    window.addEventListener("scroll", handleStickyMenu);
+  //   const handleClickOutside = (event: MouseEvent) => {
+  //     const target = event.target as HTMLElement;
 
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as HTMLElement;
-      if (
-        !target.closest(".sidebar-content") &&
-        !target.closest("#sidebar-toggle")
-      ) {
-        setProductSidebar(false);
-      }
-    }
+  //     if (
+  //       !target.closest(".sidebar-content") &&
+  //       !target.closest("#sidebar-toggle")
+  //     ) {
+  //       setProductSidebar(false);
+  //     }
+  //   };
 
-    if (productSidebar) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+  //   document.addEventListener("mousedown", handleClickOutside);
 
-    return () => {
-      window.removeEventListener("scroll", handleStickyMenu);
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [productSidebar]);
+  //   return () => {
+  //     document.removeEventListener("mousedown", handleClickOutside);
+  //   };
+  // }, [productSidebar]);
 
   return (
     <>
+      {/* Breadcrumb with mobile filter button */}
       <Breadcrumb
         title="Explore All Products"
-        pages={["shop", "/", "shop with sidebar"]}
+        pages={["shop", "", ""]}
+        rightContent={
+          <button
+            id="sidebar-toggle"
+            type="button"
+            onClick={() => setProductSidebar((prev) => !prev)}
+            aria-label="Toggle product filters"
+            aria-expanded={productSidebar}
+            className="inline-flex items-center gap-2 rounded-md border border-gray-3 bg-white px-3 py-2 text-sm font-medium text-dark shadow-1 transition hover:border-blue hover:text-blue"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Filter
+          </button>
+        }
       />
-      <section className="overflow-hidden relative pb-20 pt-5 lg:pt-20 xl:pt-28 bg-[#f3f4f6]">
-        <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+
+      <section className="relative overflow-hidden bg-[#f3f4f6] pb-20 pt-5 lg:pt-20 xl:pt-28">
+        <div className="mx-auto w-full max-w-[1170px] px-4 sm:px-8 xl:px-0">
           <div className="flex gap-7.5">
-            {/* Sidebar Start */}
-            <div
-              className={`sidebar-content fixed xl:z-1 z-9999 left-0 top-0 xl:translate-x-0 xl:static max-w-[310px] xl:max-w-[270px] w-full ease-out duration-200 ${
+            {/* Sidebar */}
+            {/* Mobile backdrop */}
+            {productSidebar && (
+              <button
+                type="button"
+                aria-label="Close filters"
+                onClick={() => setProductSidebar(false)}
+                className="fixed inset-0 z-[9998] bg-black/40 xl:hidden"
+              />
+            )}
+
+            {/* Sidebar */}
+            <aside
+              id="product-sidebar"
+              aria-label="Product filters"
+              aria-hidden={!productSidebar}
+              className={`sidebar-content fixed left-0 top-0 z-[9999] h-screen w-full max-w-[310px] overflow-y-auto bg-white p-5 transition-transform duration-200 xl:sticky xl:top-24 xl:z-auto xl:h-fit xl:max-h-[calc(100vh-6rem)] xl:w-[270px] xl:max-w-[270px] xl:translate-x-0 xl:overflow-y-auto xl:p-0 ${
                 productSidebar
-                  ? "translate-x-0 bg-white p-5 h-screen overflow-y-auto"
-                  : "-translate-x-full"
+                  ? "translate-x-0"
+                  : "-translate-x-full xl:translate-x-0"
               }`}
             >
-              <button
-                id="sidebar-toggle"
-                onClick={() => setProductSidebar(!productSidebar)}
-                aria-label="button for product sidebar toggle"
-                className={`xl:hidden absolute -right-12 sm:-right-8 flex items-center justify-center w-9 h-9 rounded-md bg-white shadow-1 text-dark ${
-                  stickyMenu
-                    ? "lg:top-20 sm:top-34.5 top-35"
-                    : "lg:top-24 sm:top-39 top-37"
-                }`}
-              >
-                <SlidersHorizontal className="w-5 h-5" />
-              </button>
-
-              <form onSubmit={(e) => e.preventDefault()}>
+              <form onSubmit={(event) => event.preventDefault()}>
                 <div className="flex flex-col gap-6">
-                  {/* Clean All Header */}
-                  <div className="bg-white shadow-1 rounded-lg py-4 px-5">
+                  {/* Filter header */}
+                  <div className="rounded-lg bg-white px-5 py-4 shadow-1">
                     <div className="flex items-center justify-between">
                       <p className="font-medium text-dark">Filters:</p>
-                      <button
+
+                      {/* <button
                         type="button"
                         onClick={handleResetFilters}
-                        className="text-blue text-sm hover:underline"
+                        className="text-sm text-blue hover:underline"
                       >
                         Clean All
-                      </button>
+                      </button> */}
                     </div>
                   </div>
 
-                  {/* Category Filter */}
+                  {/* Category filter */}
                   <CategoryDropdown
                     categories={categoriesWithCounts}
                     selectedCategory={selectedCategory}
                     onSelectCategory={setSelectedCategory}
                   />
 
-                  {/* Price Filter */}
+                  {/* Price filter */}
                   <PriceDropdown
                     minPrice={minProductPrice}
                     maxPrice={maxProductPrice}
                     currentPriceRange={priceRange}
                     onPriceChange={setPriceRange}
                   />
+
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="text-sm text-blue hover:underline bg-gray-1 px-3 py-2 rounded-md shadow-1 xl:hidden"
+                  >
+                    Clean All
+                  </button>
                 </div>
               </form>
-            </div>
-            {/* Sidebar End */}
+            </aside>
 
-            {/* Content Start */}
-            <div className="xl:max-w-[870px] w-full">
-              <div className="rounded-lg bg-white shadow-1 pl-3 pr-2.5 py-2.5 mb-6">
-                <div className="flex items-center justify-between">
+            {/* Products */}
+            <div className="w-full xl:max-w-[870px]">
+              <div className="mb-6 rounded-lg bg-white py-2.5 pl-3 pr-2.5 shadow-1">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-4">
                     <CustomSelect
                       options={sortOptions}
-                      onChange={(opt) => setSortOption(opt.value)}
+                      onChange={(option) => setSortOption(option.value)}
                     />
+
                     <p className="text-sm text-gray-600">
                       Showing{" "}
-                      <span className="text-dark font-medium">
+                      <span className="font-medium text-dark">
                         {filteredProducts.length} of {products.length}
                       </span>{" "}
                       Products
                     </p>
                   </div>
-
-                  <div className="flex items-center gap-2.5">
-                    <button
-                      onClick={() => setProductStyle("grid")}
-                      aria-label="button for product grid tab"
-                      className={`${
-                        productStyle === "grid"
-                          ? "bg-blue border-blue text-white"
-                          : "text-dark bg-gray-1 border-gray-3"
-                      } flex items-center justify-center w-10.5 h-9 rounded-[5px] border ease-out duration-200 hover:bg-blue hover:border-blue hover:text-white`}
-                    >
-                      <LayoutGrid className="w-4 h-4 text-current" />
-                    </button>
-
-                    <button
-                      onClick={() => setProductStyle("list")}
-                      aria-label="button for product list tab"
-                      className={`${
-                        productStyle === "list"
-                          ? "bg-blue border-blue text-white"
-                          : "text-dark bg-gray-1 border-gray-3"
-                      } flex items-center justify-center w-10.5 h-9 rounded-[5px] border ease-out duration-200 hover:bg-blue hover:border-blue hover:text-white`}
-                    >
-                      <List className="w-4 h-4 text-current" />
-                    </button>
-                  </div>
                 </div>
               </div>
 
-              {/* Products Display */}
+              {/* Product display */}
               {filteredProducts.length === 0 ? (
-                <div className="bg-white p-12 text-center rounded-lg shadow-1">
-                  <p className="text-gray-500 mb-2">
+                <div className="rounded-lg bg-white p-12 text-center shadow-1">
+                  <p className="mb-2 text-gray-500">
                     No products match your selected filters.
                   </p>
+
                   <button
+                    type="button"
                     onClick={handleResetFilters}
-                    className="text-blue text-sm hover:underline font-medium"
+                    className="text-sm font-medium text-blue hover:underline"
                   >
                     Reset Filters
                   </button>
                 </div>
               ) : (
                 <div
-                  className={`${
+                  className={
                     productStyle === "grid"
-                      ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-7.5 gap-y-9"
+                      ? "grid grid-cols-3 gap-x-3 gap-y-3 sm:grid-cols-2 md:gap-x-5 md:gap-y-9 lg:grid-cols-3"
                       : "flex flex-col gap-7.5"
-                  }`}
+                  }
                 >
                   {filteredProducts.map((item) =>
                     productStyle === "grid" ? (
@@ -278,44 +276,15 @@ const ShopWithSidebar = () => {
                 </div>
               )}
 
-              {/* Pagination */}
+              {/* Pagination placeholder */}
               {filteredProducts.length > 0 && (
-                <div className="flex justify-center mt-15">
-                  <div className="bg-white shadow-1 rounded-md p-2">
-                    <ul className="flex items-center gap-1">
-                      <li>
-                        <button
-                          aria-label="button for pagination left"
-                          type="button"
-                          disabled
-                          className="flex items-center justify-center w-8 h-9 rounded-[3px] disabled:text-gray-4 text-dark hover:bg-blue hover:text-white transition"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                      </li>
-                      <li>
-                        <a
-                          href="#"
-                          className="flex py-1.5 px-3.5 rounded-[3px] bg-blue text-white hover:bg-blue-dark"
-                        >
-                          1
-                        </a>
-                      </li>
-                      <li>
-                        <button
-                          aria-label="button for pagination right"
-                          type="button"
-                          className="flex items-center justify-center w-8 h-9 rounded-[3px] text-dark hover:bg-blue hover:text-white transition"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </li>
-                    </ul>
+                <div className="mt-15 flex justify-center">
+                  <div className="rounded-md bg-white p-2 shadow-1">
+                    <span className="px-3.5 py-1.5 text-sm text-blue">1</span>
                   </div>
                 </div>
               )}
             </div>
-            {/* Content End */}
           </div>
         </div>
       </section>

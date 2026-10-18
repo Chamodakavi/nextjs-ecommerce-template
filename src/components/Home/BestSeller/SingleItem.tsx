@@ -55,7 +55,7 @@ const SingleItem = ({ item }: { item: Product }) => {
 
   return (
     <div onClick={handleOpenDetailModal} className="group cursor-pointer">
-      <div className="relative overflow-hidden rounded-lg bg-[#F6F7FB] min-h-[403px]">
+      <div className="relative overflow-hidden rounded-lg bg-[#F6F7FB] min-h-[200px] md:min-h-[403px]">
         {/* Card Header & Info */}
         <div className="text-center px-4 py-7.5">
           <div className="flex items-center justify-center gap-2.5 mb-2">
