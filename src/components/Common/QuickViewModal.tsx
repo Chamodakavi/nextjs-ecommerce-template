@@ -19,6 +19,7 @@ import { addItemToWishlist } from "@/redux/features/wishlist-slice";
 import { usePreviewSlider } from "@/app/context/PreviewSliderContext";
 import { updateproductDetails } from "@/redux/features/product-details";
 import AddToCartModal from "@/components/Shop/AddToCartModal";
+import AddToWishlistModal from "./AddToWishlistModal";
 
 const QuickViewModal = () => {
   const { isModalOpen, closeModal } = useModalContext();
@@ -26,6 +27,7 @@ const QuickViewModal = () => {
   const [quantity, setQuantity] = useState(1);
   const [activePreview, setActivePreview] = useState(0);
   const [showCartAlert, setShowCartAlert] = useState(false);
+  const [showWishlistAlert, setShowWishlistAlert] = useState(false);
 
   const dispatch = useDispatch<AppDispatch>();
 
@@ -101,6 +103,7 @@ const QuickViewModal = () => {
         quantity: 1,
       } as any),
     );
+    setShowWishlistAlert(true);
   };
 
   return (
@@ -285,6 +288,12 @@ const QuickViewModal = () => {
           setShowCartAlert(false);
           closeModal();
         }}
+        productName={product.name}
+      />
+
+      <AddToWishlistModal
+        isOpen={showWishlistAlert}
+        onClose={() => setShowWishlistAlert(false)}
         productName={product.name}
       />
     </>
