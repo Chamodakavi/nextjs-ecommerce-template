@@ -1,16 +1,19 @@
 import Contact from "@/components/Contact";
-
+import { getWebData } from "@/lib/services/getWebData";
 import { Metadata } from "next";
+
 export const metadata: Metadata = {
-  title: "Contact Page | NextCommerce Nextjs E-commerce template",
-  description: "This is Contact Page for NextCommerce Template",
-  // other metadata
+  title: "Contact Us | Premier Auto Hub",
+  description:
+    "Get in touch with Premier Auto Hub. Reach out for inquiries, orders, and support.",
 };
 
-const ContactPage = () => {
+const ContactPage = async () => {
+  const webData = await getWebData();
+
   return (
     <main>
-      <Contact />
+      <Contact webData={webData} />
     </main>
   );
 };
