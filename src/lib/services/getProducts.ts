@@ -47,3 +47,35 @@ export async function getAllProducts(): Promise<Product[]> {
     return [];
   }
 }
+
+export async function getProductById(id: string): Promise<Product | null> {
+  try {
+    const supabase = createPublicClient();
+
+    // Check if `id` is numeric or string to query the appropriate column
+    const isNumeric = /^\d+$/.test(id);
+
+    let query = supabase.from("products").select("*");
+
+    if (isNumeric) {
+      // Query using standard numeric primary key or custom ID
+      query = query.or(`id.eq.${id},custom_product_id.eq.${id}`);
+    } else {
+      // Query string IDs (UUIDs or custom string slugs)
+      query = query.or(`id.eq.${id},custom_product_id.eq.${id}`);
+    }
+
+    const { data, error } = await query.single();
+
+    if (error || !data) {
+      console.error(`Error fetching product with ID ${id}:`, error);
+      return null;
+    }
+
+    return data as Product;
+  } catch (err: any) {
+    if (err?.digest === "DYNAMIC_SERVER_USAGE") throw err;
+    console.error(`Exception in getProductById for ID ${id}:`, err);
+    return null;
+  }
+}

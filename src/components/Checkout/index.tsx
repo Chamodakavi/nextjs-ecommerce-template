@@ -19,7 +19,7 @@ const Checkout = () => {
     0,
   );
 
-  const shippingFee = cartItems.length > 0 ? 15 : 0;
+  const shippingFee = cartItems.length > 0 ? 400 : 0;
   const total = subtotal + shippingFee;
 
   return (
