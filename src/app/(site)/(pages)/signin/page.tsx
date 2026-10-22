@@ -1,10 +1,11 @@
 import Signin from "@/components/Auth/Signin";
 import React from "react";
 import { Metadata } from "next";
+
 export const metadata: Metadata = {
-  title: "Signin Page | NextCommerce Nextjs E-commerce template",
-  description: "This is Signin Page for NextCommerce Template",
-  // other metadata
+  title: "Sign In | Premier Auto Hub",
+  description:
+    "Sign in to your Premier Auto Hub account to manage orders and settings.",
 };
 
 const SigninPage = () => {

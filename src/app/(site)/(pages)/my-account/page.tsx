@@ -1,11 +1,11 @@
 import MyAccount from "@/components/MyAccount";
 import React from "react";
-
 import { Metadata } from "next";
+
 export const metadata: Metadata = {
-  title: "My Account | NextCommerce Nextjs E-commerce template",
-  description: "This is My Account page for NextCommerce Template",
-  // other metadata
+  title: "My Account | Premier Auto Hub",
+  description:
+    "Manage your orders, shipping addresses, and account details on Premier Auto Hub.",
 };
 
 const MyAccountPage = () => {

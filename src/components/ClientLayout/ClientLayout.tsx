@@ -38,7 +38,7 @@ export default function ClientLayout({ children, webData }: ClientLayoutProps) {
               <ModalProvider>
                 <PreviewSliderProvider>
                   <Header webData={webData} />
-                  <main className="pt-1 lg:pt-1">{children}</main>
+                  <main className="pt-1 lg:pt-10">{children}</main>
                   <QuickViewModal />
                   <CartSidebarModal />
                   <PreviewSliderModal />
