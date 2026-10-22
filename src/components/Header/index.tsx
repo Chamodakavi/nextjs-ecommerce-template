@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useMemo, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -11,13 +11,15 @@ import { useAppSelector } from "@/redux/store";
 import { useSelector } from "react-redux";
 import { selectTotalPrice } from "@/redux/features/cart-slice";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
-import { getSupabaseBrowserClient, signOutUser } from "@/lib/supabase/auth";
+import { signOutUser } from "@/lib/supabase/auth";
 
 import { useProducts } from "@/context/ProductContext";
 import { useCatData } from "@/context/WebCatProvider";
+import { useHeaderState } from "@/hooks/useHeaderState";
 
 import { Product } from "@/types/product";
 import { Category } from "@/types/category";
+import { WebData } from "@/types/webData";
 
 import {
   Search,
@@ -31,12 +33,13 @@ import {
   LogOut,
 } from "lucide-react";
 
-import { WebData } from "@/types/webData";
-
 const Header = ({ webData }: { webData: WebData | null }) => {
   const router = useRouter();
 
-  // Retrieve categories and products directly from providers
+  // Custom State Hook
+  const { state, setters, refs, actions } = useHeaderState();
+
+  // Data Providers
   const rawCategories = useCatData();
   const rawProducts = useProducts();
 
@@ -45,189 +48,100 @@ const Header = ({ webData }: { webData: WebData | null }) => {
     : [];
   const products: Product[] = Array.isArray(rawProducts) ? rawProducts : [];
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<SelectOption>({
-    label: "All Categories",
-    value: "all",
-  });
-
-  const [navigationOpen, setNavigationOpen] = useState(false);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const [stickyMenu, setStickyMenu] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<{
-    full_name?: string;
-    avatar_url?: string;
-  } | null>(null);
-  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
-
-  const mobileNavRef = useRef<HTMLDivElement>(null);
-  const mobileToggleBtnRef = useRef<HTMLButtonElement>(null);
-  const userDropdownRef = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLDivElement>(null);
-
+  // Redux & Modal Context
   const { openCartModal } = useCartModalContext();
-  const cartItems = useAppSelector((state) => state.cartReducer.items);
+  const cartItems = useAppSelector((st) => st.cartReducer.items);
   const totalPrice = useSelector(selectTotalPrice);
 
-  // 1. Build category options for the search dropdown
-  const categoryOptions: SelectOption[] = [
-    { label: "All Categories", value: "all" },
-    ...categories.map((cat: any) => ({
-      label: cat.title || cat.name || cat.category_name || "Category",
-      value: String(cat.id || cat.slug || cat.title || cat.name),
-    })),
-  ];
+  // Category Options
+  const categoryOptions: SelectOption[] = useMemo(() => {
+    return [
+      { label: "All Categories", value: "all" },
+      ...categories.map((cat: any) => ({
+        label: cat.title || cat.name || cat.category_name || "Category",
+        value: String(cat.id || cat.slug || cat.title || cat.name),
+      })),
+    ];
+  }, [categories]);
 
-  // 2. Filter products based on category select & product name input
-  const filteredProducts = products.filter((product) => {
-    const productName = product.name?.toLowerCase() || "";
-    const matchesSearch = productName.includes(
-      searchQuery.toLowerCase().trim(),
-    );
+  // Filtered Products for Predictive Search
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const productName = product.name?.toLowerCase() || "";
+      const matchesSearch = productName.includes(
+        state.searchQuery.toLowerCase().trim(),
+      );
 
-    const matchesCategory =
-      selectedCategory.value === "all" ||
-      String(product.category) === selectedCategory.value ||
-      product.category === selectedCategory.label;
+      const matchesCategory =
+        state.selectedCategory.value === "all" ||
+        String(product.category) === state.selectedCategory.value ||
+        product.category === state.selectedCategory.label;
 
-    return matchesSearch && matchesCategory;
-  });
-
-  // Handle submit action on form
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-
-    setSearchDropdownOpen(false);
-    setMobileSearchOpen(false);
-
-    router.push(
-      `/shop-with-sidebar?search=${encodeURIComponent(
-        searchQuery.trim(),
-      )}&category=${selectedCategory.value}`,
-    );
-  };
-
-  // Auth & Profile Listener
-  useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
-
-    const fetchUserProfile = async (userId: string) => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("full_name, avatar_url")
-        .eq("id", userId)
-        .single();
-
-      if (data) setProfile(data);
-    };
-
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) {
-        setUser(data.user);
-        fetchUserProfile(data.user.id);
-      }
+      return matchesSearch && matchesCategory;
     });
+  }, [products, state.searchQuery, state.selectedCategory]);
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (session?.user) {
-          setUser(session.user);
-          fetchUserProfile(session.user.id);
-        } else {
-          setUser(null);
-          setProfile(null);
-        }
-      },
-    );
+  // Handlers
+  const handleSearchSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!state.searchQuery.trim()) return;
 
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, []);
+      setters.setSearchDropdownOpen(false);
 
-  // Sticky header on scroll
-  useEffect(() => {
-    const handleStickyMenu = () => {
-      setStickyMenu(window.scrollY >= 80);
-    };
-    window.addEventListener("scroll", handleStickyMenu);
-    return () => window.removeEventListener("scroll", handleStickyMenu);
-  }, []);
+      router.push(
+        `/shop-with-sidebar?search=${encodeURIComponent(
+          state.searchQuery.trim(),
+        )}&category=${encodeURIComponent(state.selectedCategory.label)}`,
+      );
+    },
+    [router, state.searchQuery, state.selectedCategory, setters],
+  );
 
-  // Handle outside clicks to close active menus
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node;
+  const handleSearchInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
+      setters.setSearchQuery(val);
+      setters.setSearchDropdownOpen(val.trim().length > 0);
+    },
+    [setters],
+  );
 
-      if (
-        navigationOpen &&
-        mobileNavRef.current &&
-        !mobileNavRef.current.contains(target) &&
-        mobileToggleBtnRef.current &&
-        !mobileToggleBtnRef.current.contains(target)
-      ) {
-        setNavigationOpen(false);
-      }
-
-      if (
-        userDropdownOpen &&
-        userDropdownRef.current &&
-        !userDropdownRef.current.contains(target)
-      ) {
-        setUserDropdownOpen(false);
-      }
-
-      if (
-        searchDropdownOpen &&
-        searchRef.current &&
-        !searchRef.current.contains(target)
-      ) {
-        setSearchDropdownOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [navigationOpen, userDropdownOpen, searchDropdownOpen]);
-
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     await signOutUser();
-    setUserDropdownOpen(false);
+    setters.setUserDropdownOpen(false);
     window.location.reload();
-  };
+  }, [setters]);
 
   const displayName =
-    profile?.full_name ||
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.name ||
-    user?.email?.split("@")[0] ||
+    state.profile?.full_name ||
+    state.user?.user_metadata?.full_name ||
+    state.user?.user_metadata?.name ||
+    state.user?.email?.split("@")[0] ||
     "User";
 
   const displayAvatar =
-    profile?.avatar_url ||
-    user?.user_metadata?.avatar_url ||
-    user?.user_metadata?.picture;
+    state.profile?.avatar_url ||
+    state.user?.user_metadata?.avatar_url ||
+    state.user?.user_metadata?.picture;
 
   return (
     <header
       className={`fixed left-0 top-0 w-full z-9999 bg-white transition-all ease-in-out duration-300 ${
-        stickyMenu ? "shadow-md" : ""
+        state.stickyMenu ? "shadow-md" : ""
       }`}
     >
       <div className="max-w-[1170px] mx-auto px-4 sm:px-7.5 xl:px-0">
-        {/* Mobile Header Bar (< 1280px) */}
+        {/* Mobile Header Bar */}
         <div className="flex xl:hidden items-center justify-between py-3">
           <button
-            ref={mobileToggleBtnRef}
+            ref={refs.mobileToggleBtnRef}
             type="button"
             aria-label="Toggle navigation menu"
-            onClick={() => setNavigationOpen(!navigationOpen)}
+            onClick={actions.toggleNavigation}
             className="p-1.5 rounded-md text-dark hover:text-blue hover:bg-gray-1 transition"
           >
-            {navigationOpen ? (
+            {state.navigationOpen ? (
               <X className="w-6 h-6" />
             ) : (
               <Menu className="w-6 h-6" />
@@ -249,7 +163,7 @@ const Header = ({ webData }: { webData: WebData | null }) => {
             <button
               type="button"
               aria-label="Search"
-              onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+              onClick={actions.toggleMobileSearch}
               className="p-1.5 rounded-md text-dark hover:text-blue transition"
             >
               <Search className="w-5 h-5" />
@@ -271,14 +185,14 @@ const Header = ({ webData }: { webData: WebData | null }) => {
           </div>
         </div>
 
-        {/* Mobile Search Input */}
-        {mobileSearchOpen && (
+        {/* Mobile Search */}
+        {state.mobileSearchOpen && (
           <div className="block xl:hidden py-2.5 pb-4 border-t border-gray-2 relative">
             <form onSubmit={handleSearchSubmit} className="relative w-full">
               <input
                 type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={state.searchQuery}
+                onChange={handleSearchInputChange}
                 placeholder="I am shopping for..."
                 className="w-full rounded-md bg-gray-1 border border-gray-3 py-2 pl-4 pr-10 text-sm outline-none focus:border-blue"
               />
@@ -293,10 +207,10 @@ const Header = ({ webData }: { webData: WebData | null }) => {
           </div>
         )}
 
-        {/* Desktop Header Bar (>= 1280px) */}
+        {/* Desktop Header */}
         <div
           className={`hidden xl:flex items-center justify-between gap-5 transition-all duration-200 ${
-            stickyMenu ? "py-3" : "py-5"
+            state.stickyMenu ? "py-3" : "py-5"
           }`}
         >
           <Link href="/" className="flex-shrink-0">
@@ -310,30 +224,26 @@ const Header = ({ webData }: { webData: WebData | null }) => {
             />
           </Link>
 
-          {/* Desktop Search Section */}
-          <div className="max-w-[475px] w-full relative" ref={searchRef}>
+          {/* Desktop Search */}
+          <div className="max-w-[475px] w-full relative" ref={refs.searchRef}>
             <form onSubmit={handleSearchSubmit}>
               <div className="flex items-center">
-                {/* Categories Dropdown on Left */}
                 <CustomSelect
                   options={categoryOptions}
-                  selectedOption={selectedCategory}
-                  onSelect={(opt) => setSelectedCategory(opt)}
+                  selectedOption={state.selectedCategory}
+                  onSelect={setters.setSelectedCategory}
                 />
 
-                {/* Main Product Search Input */}
                 <div className="relative w-full">
                   <span className="absolute left-0 top-1/2 -translate-y-1/2 inline-block w-px h-5.5 bg-gray-4"></span>
                   <input
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setSearchDropdownOpen(e.target.value.trim().length > 0);
-                    }}
+                    onChange={handleSearchInputChange}
                     onFocus={() => {
-                      if (searchQuery.trim().length > 0)
-                        setSearchDropdownOpen(true);
+                      if (state.searchQuery.trim().length > 0) {
+                        setters.setSearchDropdownOpen(true);
+                      }
                     }}
-                    value={searchQuery}
+                    value={state.searchQuery}
                     type="search"
                     placeholder="I am shopping for..."
                     className="w-full rounded-r-[5px] bg-gray-1 border border-l-0 border-gray-3 py-2.5 pl-4 pr-10 outline-none text-sm focus:border-blue transition"
@@ -349,8 +259,8 @@ const Header = ({ webData }: { webData: WebData | null }) => {
               </div>
             </form>
 
-            {/* Predictive Products Search List */}
-            {searchDropdownOpen && searchQuery.trim() !== "" && (
+            {/* Predictive Search Dropdown */}
+            {state.searchDropdownOpen && state.searchQuery.trim() !== "" && (
               <div className="absolute left-0 top-full mt-2 w-full bg-white rounded-lg shadow-xl border border-gray-3 z-50 max-h-80 overflow-y-auto p-2">
                 {filteredProducts.length > 0 ? (
                   filteredProducts.slice(0, 6).map((product) => {
@@ -364,8 +274,8 @@ const Header = ({ webData }: { webData: WebData | null }) => {
                         key={product.id}
                         href={`/shop/${product.id}`}
                         onClick={() => {
-                          setSearchDropdownOpen(false);
-                          setSearchQuery("");
+                          setters.setSearchDropdownOpen(false);
+                          setters.setSearchQuery("");
                         }}
                         className="flex items-center gap-3 p-2 hover:bg-gray-1 rounded-md transition-colors"
                       >
@@ -393,7 +303,7 @@ const Header = ({ webData }: { webData: WebData | null }) => {
                   })
                 ) : (
                   <div className="p-4 text-center text-sm text-gray-500">
-                    No products found for "{searchQuery}"
+                    No products found for "{state.searchQuery}"
                   </div>
                 )}
               </div>
@@ -416,13 +326,13 @@ const Header = ({ webData }: { webData: WebData | null }) => {
 
             <span className="w-px h-7.5 bg-gray-4"></span>
 
-            {/* Account / Profile Button */}
+            {/* Profile Menu */}
             <div className="flex items-center gap-6">
-              {user ? (
-                <div className="relative" ref={userDropdownRef}>
+              {state.user ? (
+                <div className="relative" ref={refs.userDropdownRef}>
                   <button
                     type="button"
-                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    onClick={actions.toggleUserDropdown}
                     className="flex items-center gap-2.5 group cursor-pointer focus:outline-none"
                   >
                     <div className="relative w-9 h-9 rounded-full overflow-hidden border border-gray-3 bg-blue/10 flex items-center justify-center shrink-0">
@@ -451,11 +361,11 @@ const Header = ({ webData }: { webData: WebData | null }) => {
                     </div>
                   </button>
 
-                  {userDropdownOpen && (
+                  {state.userDropdownOpen && (
                     <div className="absolute right-0 mt-3 w-48 bg-white rounded-lg shadow-xl border border-gray-3 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                       <Link
                         href="/my-account"
-                        onClick={() => setUserDropdownOpen(false)}
+                        onClick={actions.closeUserDropdown}
                         className="flex items-center gap-2 px-4 py-2 text-sm text-dark hover:bg-gray-1 hover:text-blue transition-colors"
                       >
                         <User className="w-4 h-4 text-gray-500" />
@@ -520,9 +430,9 @@ const Header = ({ webData }: { webData: WebData | null }) => {
         <div className="max-w-[1170px] mx-auto px-4 sm:px-7.5 xl:px-0">
           <div className="flex items-center justify-between">
             <div
-              ref={mobileNavRef}
+              ref={refs.mobileNavRef}
               className={`w-full xl:w-auto left-0 top-full xl:static xl:flex items-center justify-between ${
-                navigationOpen
+                state.navigationOpen
                   ? "block absolute bg-white shadow-lg border-b border-gray-3 p-5 z-50"
                   : "hidden xl:flex"
               }`}
@@ -534,13 +444,13 @@ const Header = ({ webData }: { webData: WebData | null }) => {
                       <Dropdown
                         key={i}
                         menuItem={menuItem}
-                        stickyMenu={stickyMenu}
+                        stickyMenu={state.stickyMenu}
                       />
                     ) : (
                       <li key={i}>
                         <Link
                           href={menuItem.path}
-                          onClick={() => setNavigationOpen(false)}
+                          onClick={actions.closeNavigation}
                           className="hover:text-blue text-custom-sm font-medium text-dark block py-1.5 xl:py-4 transition-colors"
                         >
                           {menuItem.title}

@@ -29,10 +29,10 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     onSelect(option);
     setIsOpen(false);
 
-    // Immediately navigate to /shop-with-sidebar with the chosen category
     if (option.value === "all") {
       router.push("/shop-with-sidebar");
     } else {
+      // Send category label as parameter
       router.push(
         `/shop-with-sidebar?category=${encodeURIComponent(option.label)}`,
       );

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { SlidersHorizontal } from "lucide-react";
 
 import Breadcrumb from "../Common/Breadcrumb";
@@ -11,14 +12,35 @@ import SingleGridItem from "../Shop/SingleGridItem";
 import SingleListItem from "../Shop/SingleListItem";
 import { useProducts } from "@/context/ProductContext";
 
-const ShopWithSidebar = () => {
+const ShopWithSidebarContent = () => {
   const products = useProducts();
+  const searchParams = useSearchParams();
+
+  // Read URL query parameters
+  const urlCategory = searchParams.get("category");
+  const urlSearch = searchParams.get("search");
 
   const [productStyle] = useState<"grid" | "list">("grid");
   const [productSidebar, setProductSidebar] = useState(false);
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortOption, setSortOption] = useState<string>("0");
+
+  // Synchronize state whenever URL query parameters change
+  useEffect(() => {
+    if (urlCategory && urlCategory !== "all") {
+      setSelectedCategory(urlCategory);
+    } else {
+      setSelectedCategory(null);
+    }
+
+    if (urlSearch) {
+      setSearchQuery(urlSearch);
+    } else {
+      setSearchQuery("");
+    }
+  }, [urlCategory, urlSearch]);
 
   // Dynamic price boundaries
   const { minProductPrice, maxProductPrice } = useMemo(() => {
@@ -63,29 +85,42 @@ const ShopWithSidebar = () => {
     }));
   }, [products]);
 
-  // Reset filters
+  // Reset all active filters
   const handleResetFilters = () => {
     setSelectedCategory(null);
+    setSearchQuery("");
     setPriceRange([minProductPrice, maxProductPrice]);
     setSortOption("0");
   };
 
-  // Filter and sort products
+  // Filter and sort products based on Category, Search Query, and Price Range
   const filteredProducts = useMemo(() => {
     let result = [...products];
 
+    // Category Filter (matches Category Name or ID)
     if (selectedCategory) {
       result = result.filter(
-        (product) => product.category === selectedCategory,
+        (product) =>
+          product.category === selectedCategory ||
+          String(product.category) === selectedCategory,
       );
     }
 
+    // Search Query Filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter((product) =>
+        product.name?.toLowerCase().includes(q),
+      );
+    }
+
+    // Price Filter
     result = result.filter((product) => {
       const price = Number(product.selling_price || 0);
-
       return price >= priceRange[0] && price <= priceRange[1];
     });
 
+    // Sorting Logic
     if (sortOption === "1") {
       result.sort(
         (a, b) => Number(a.selling_price || 0) - Number(b.selling_price || 0),
@@ -103,7 +138,7 @@ const ShopWithSidebar = () => {
     }
 
     return result;
-  }, [products, selectedCategory, priceRange, sortOption]);
+  }, [products, selectedCategory, searchQuery, priceRange, sortOption]);
 
   const sortOptions: Option[] = [
     { label: "Latest Products", value: "0" },
@@ -111,34 +146,11 @@ const ShopWithSidebar = () => {
     { label: "Price: High to Low", value: "2" },
   ];
 
-  // Close sidebar when clicking outside
-  // useEffect(() => {
-  //   if (!productSidebar) return;
-
-  //   const handleClickOutside = (event: MouseEvent) => {
-  //     const target = event.target as HTMLElement;
-
-  //     if (
-  //       !target.closest(".sidebar-content") &&
-  //       !target.closest("#sidebar-toggle")
-  //     ) {
-  //       setProductSidebar(false);
-  //     }
-  //   };
-
-  //   document.addEventListener("mousedown", handleClickOutside);
-
-  //   return () => {
-  //     document.removeEventListener("mousedown", handleClickOutside);
-  //   };
-  // }, [productSidebar]);
-
   return (
     <>
-      {/* Breadcrumb with mobile filter button */}
       <Breadcrumb
         title="Explore All Products"
-        pages={["shop", "", ""]}
+        pages={["shop", ""]}
         rightContent={
           <button
             id="sidebar-toggle"
@@ -157,8 +169,7 @@ const ShopWithSidebar = () => {
       <section className="relative overflow-hidden bg-[#f3f4f6] pb-20 pt-5 lg:pt-20 xl:pt-28">
         <div className="mx-auto w-full max-w-[1170px] px-4 sm:px-8 xl:px-0">
           <div className="flex gap-7.5">
-            {/* Sidebar */}
-            {/* Mobile backdrop */}
+            {/* Mobile Backdrop */}
             {productSidebar && (
               <button
                 type="button"
@@ -181,29 +192,29 @@ const ShopWithSidebar = () => {
             >
               <form onSubmit={(event) => event.preventDefault()}>
                 <div className="flex flex-col gap-6">
-                  {/* Filter header */}
                   <div className="rounded-lg bg-white px-5 py-4 shadow-1">
                     <div className="flex items-center justify-between">
                       <p className="font-medium text-dark">Filters:</p>
-
-                      {/* <button
-                        type="button"
-                        onClick={handleResetFilters}
-                        className="text-sm text-blue hover:underline"
-                      >
-                        Clean All
-                      </button> */}
+                      {(selectedCategory || searchQuery) && (
+                        <button
+                          type="button"
+                          onClick={handleResetFilters}
+                          className="text-xs font-medium text-blue hover:underline"
+                        >
+                          Clear All
+                        </button>
+                      )}
                     </div>
                   </div>
 
-                  {/* Category filter */}
+                  {/* Category Dropdown Filter */}
                   <CategoryDropdown
                     categories={categoriesWithCounts}
                     selectedCategory={selectedCategory}
                     onSelectCategory={setSelectedCategory}
                   />
 
-                  {/* Price filter */}
+                  {/* Price Range Filter */}
                   <PriceDropdown
                     minPrice={minProductPrice}
                     maxPrice={maxProductPrice}
@@ -222,7 +233,7 @@ const ShopWithSidebar = () => {
               </form>
             </aside>
 
-            {/* Products */}
+            {/* Main Products Area */}
             <div className="w-full xl:max-w-[870px]">
               <div className="mb-6 rounded-lg bg-white py-2.5 pl-3 pr-2.5 shadow-1">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -243,7 +254,7 @@ const ShopWithSidebar = () => {
                 </div>
               </div>
 
-              {/* Product display */}
+              {/* Product Grid or Empty State */}
               {filteredProducts.length === 0 ? (
                 <div className="rounded-lg bg-white p-12 text-center shadow-1">
                   <p className="mb-2 text-gray-500">
@@ -262,7 +273,7 @@ const ShopWithSidebar = () => {
                 <div
                   className={
                     productStyle === "grid"
-                      ? "grid grid-cols-3 gap-x-3 gap-y-3 sm:grid-cols-2 md:gap-x-5 md:gap-y-9 lg:grid-cols-3"
+                      ? "grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-x-5 md:gap-y-9 lg:grid-cols-3"
                       : "flex flex-col gap-7.5"
                   }
                 >
@@ -275,15 +286,6 @@ const ShopWithSidebar = () => {
                   )}
                 </div>
               )}
-
-              {/* Pagination placeholder */}
-              {filteredProducts.length > 0 && (
-                <div className="mt-15 flex justify-center">
-                  <div className="rounded-md bg-white p-2 shadow-1">
-                    <span className="px-3.5 py-1.5 text-sm text-blue">1</span>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -292,4 +294,14 @@ const ShopWithSidebar = () => {
   );
 };
 
-export default ShopWithSidebar;
+export default function ShopWithSidebar() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-10 text-center">Loading shop products...</div>
+      }
+    >
+      <ShopWithSidebarContent />
+    </Suspense>
+  );
+}
