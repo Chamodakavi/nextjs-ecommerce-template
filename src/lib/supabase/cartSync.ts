@@ -6,13 +6,13 @@ import {
 } from "@/redux/features/cart-slice";
 
 /**
- * Pushes local Redux cart items to Supabase when user logs in
+ * Sync local Redux cart to Supabase on login, then pull total synced cart back to Redux
  */
 export async function syncReduxCartToSupabase(userId: string) {
   const supabase = getSupabaseBrowserClient();
   const localCartItems = store.getState().cartReducer.items;
 
-  // 1. Get or create user cart
+  // 1. Fetch or create user cart record in Supabase
   let { data: cart } = await supabase
     .from("carts")
     .select("id")
@@ -27,13 +27,13 @@ export async function syncReduxCartToSupabase(userId: string) {
       .single();
 
     if (error || !newCart) {
-      console.error("Failed to create cart in Supabase:", error);
+      console.error("Failed to create database cart:", error);
       return;
     }
     cart = newCart;
   }
 
-  // 2. Sync local items to Supabase
+  // 2. Upsert local guest items (if any) to Supabase database
   if (localCartItems.length > 0) {
     for (const item of localCartItems) {
       await supabase.from("cart_items").upsert(
@@ -47,29 +47,29 @@ export async function syncReduxCartToSupabase(userId: string) {
     }
   }
 
-  // 3. Fetch full synced cart back from Supabase to hydrate state
+  // 3. Pull all database cart items into Redux for cross-device consistency
   await fetchSupabaseCartToRedux(userId);
 }
 
 /**
- * Pulls database cart items from Supabase into Redux store
+ * Fetch cart items stored in Supabase into Redux store
  */
 export async function fetchSupabaseCartToRedux(userId: string) {
   const supabase = getSupabaseBrowserClient();
 
+  // Retrieve user cart along with its items
   const { data: cart } = await supabase
     .from("carts")
     .select("id, cart_items(*)")
     .eq("user_id", userId)
     .single();
 
-  if (cart && cart.cart_items) {
-    // Clear existing local items first
+  if (cart && cart.cart_items && cart.cart_items.length > 0) {
+    // Clear initial empty/local Redux state
     store.dispatch(removeAllItemsFromCart());
 
-    // Populate Redux with database cart items
+    // Fetch product details for each item to populate state
     for (const dbItem of cart.cart_items) {
-      // Fetch product details for full rendering data
       const { data: product } = await supabase
         .from("products")
         .select("*")
@@ -80,9 +80,9 @@ export async function fetchSupabaseCartToRedux(userId: string) {
         store.dispatch(
           addItemToCart({
             id: Number(product.id),
-            title: product.name || product.title,
-            price: product.price,
-            discountedPrice: product.discounted_price || product.price,
+            title: product.name,
+            price: product.cost_price || product.selling_price,
+            discountedPrice: product.selling_price,
             quantity: dbItem.quantity,
             imgs: {
               thumbnails: [
@@ -94,5 +94,66 @@ export async function fetchSupabaseCartToRedux(userId: string) {
         );
       }
     }
+  }
+}
+
+/**
+ * Add or update item in Supabase database cart directly for active logged-in users
+ */
+export async function addOrUpdateDatabaseCartItem(
+  userId: string,
+  productId: number | string,
+  quantity: number,
+) {
+  const supabase = getSupabaseBrowserClient();
+
+  let { data: cart } = await supabase
+    .from("carts")
+    .select("id")
+    .eq("user_id", userId)
+    .single();
+
+  if (!cart) {
+    const { data: newCart } = await supabase
+      .from("carts")
+      .insert({ user_id: userId })
+      .select("id")
+      .single();
+    cart = newCart;
+  }
+
+  if (cart) {
+    await supabase.from("cart_items").upsert(
+      {
+        cart_id: cart.id,
+        product_id: String(productId),
+        quantity: quantity,
+      },
+      { onConflict: "cart_id, product_id" },
+    );
+  }
+}
+
+/**
+ * Remove item from Supabase database cart directly
+ */
+export async function removeDatabaseCartItem(
+  userId: string,
+  productId: number | string,
+) {
+  const supabase = getSupabaseBrowserClient();
+
+  const { data: cart } = await supabase
+    .from("carts")
+    .select("id")
+    .eq("user_id", userId)
+    .single();
+
+  if (cart) {
+    await supabase
+      .from("cart_items")
+      .delete()
+      .eq("cart_id", cart.id)
+      .eq("product_id", String(productId));
   }
 }
