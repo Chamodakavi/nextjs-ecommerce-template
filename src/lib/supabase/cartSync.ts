@@ -17,7 +17,7 @@ export async function syncReduxCartToSupabase(userId: string) {
     .from("carts")
     .select("id")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
   if (!cart) {
     const { data: newCart, error } = await supabase
@@ -33,7 +33,7 @@ export async function syncReduxCartToSupabase(userId: string) {
     cart = newCart;
   }
 
-  // 2. Upsert local guest items (if any) to Supabase database
+  // 2. Upsert local items to Supabase database
   if (localCartItems.length > 0) {
     for (const item of localCartItems) {
       await supabase.from("cart_items").upsert(
@@ -47,7 +47,7 @@ export async function syncReduxCartToSupabase(userId: string) {
     }
   }
 
-  // 3. Pull all database cart items into Redux for cross-device consistency
+  // 3. Pull database cart items back into Redux for cross-device synchronization
   await fetchSupabaseCartToRedux(userId);
 }
 
@@ -57,24 +57,21 @@ export async function syncReduxCartToSupabase(userId: string) {
 export async function fetchSupabaseCartToRedux(userId: string) {
   const supabase = getSupabaseBrowserClient();
 
-  // Retrieve user cart along with its items
   const { data: cart } = await supabase
     .from("carts")
     .select("id, cart_items(*)")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
-  if (cart && cart.cart_items && cart.cart_items.length > 0) {
-    // Clear initial empty/local Redux state
+  if (cart && cart.cart_items) {
     store.dispatch(removeAllItemsFromCart());
 
-    // Fetch product details for each item to populate state
     for (const dbItem of cart.cart_items) {
       const { data: product } = await supabase
         .from("products")
         .select("*")
         .eq("id", dbItem.product_id)
-        .single();
+        .maybeSingle();
 
       if (product) {
         store.dispatch(
@@ -111,7 +108,7 @@ export async function addOrUpdateDatabaseCartItem(
     .from("carts")
     .select("id")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
   if (!cart) {
     const { data: newCart } = await supabase
@@ -147,7 +144,7 @@ export async function removeDatabaseCartItem(
     .from("carts")
     .select("id")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
   if (cart) {
     await supabase
@@ -156,4 +153,30 @@ export async function removeDatabaseCartItem(
       .eq("cart_id", cart.id)
       .eq("product_id", String(productId));
   }
+}
+
+/**
+ * Realtime Subscription Listener: Keeps cross-device carts synced instantly
+ */
+export function subscribeToCartChanges(userId: string) {
+  const supabase = getSupabaseBrowserClient();
+
+  const channel = supabase
+    .channel("realtime_cart_changes")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "cart_items",
+      },
+      () => {
+        fetchSupabaseCartToRedux(userId);
+      },
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }

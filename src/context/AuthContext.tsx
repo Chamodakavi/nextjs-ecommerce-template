@@ -3,7 +3,10 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/supabase/auth";
-import { syncReduxCartToSupabase } from "@/lib/supabase/cartSync";
+import {
+  syncReduxCartToSupabase,
+  subscribeToCartChanges,
+} from "@/lib/supabase/cartSync";
 import { store } from "@/redux/store";
 import { removeAllItemsFromCart } from "@/redux/features/cart-slice";
 
@@ -23,8 +26,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
+    let unsubscribeRealtimeCart: (() => void) | undefined;
 
-    // Helper to fetch user profile & sync Redux cart with Supabase
+    // Helper to fetch user profile, sync cart, and set up realtime listener
     const loadUserDataAndSync = async (userId: string) => {
       try {
         const { data } = await supabase
@@ -35,8 +39,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (data) setProfile(data);
 
-        // Sync local Redux cart with Supabase database cart
+        // 1. Sync local Redux cart with Supabase database cart
         await syncReduxCartToSupabase(userId);
+
+        // 2. Clean up previous realtime listener if active
+        if (unsubscribeRealtimeCart) {
+          unsubscribeRealtimeCart();
+        }
+
+        // 3. Subscribe to real-time cart changes across devices
+        unsubscribeRealtimeCart = subscribeToCartChanges(userId);
       } catch (err) {
         console.error("Error loading profile or syncing cart:", err);
       }
@@ -63,12 +75,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         setUser(null);
         setProfile(null);
+        if (unsubscribeRealtimeCart) {
+          unsubscribeRealtimeCart();
+          unsubscribeRealtimeCart = undefined;
+        }
       }
       setLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
+      if (unsubscribeRealtimeCart) {
+        unsubscribeRealtimeCart();
+      }
     };
   }, []);
 
