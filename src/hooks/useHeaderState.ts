@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { SelectOption } from "@/components/Header/CustomSelect";
 import { getSupabaseBrowserClient } from "@/lib/supabase/auth";
 
 export function useHeaderState() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<SelectOption>({
@@ -74,7 +75,7 @@ export function useHeaderState() {
     return () => window.removeEventListener("scroll", handleStickyMenu);
   }, []);
 
-  // Reset category selection when leaving shop-with-sidebar
+  // Reset category dropdown when navigating away from shop-with-sidebar
   useEffect(() => {
     if (!pathname.startsWith("/shop-with-sidebar")) {
       setSelectedCategory({ label: "All Categories", value: "all" });
@@ -117,6 +118,27 @@ export function useHeaderState() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [navigationOpen, userDropdownOpen, searchDropdownOpen]);
 
+  // Handler when selecting a category from the dropdown
+  const handleCategorySelect = useCallback(
+    (option: SelectOption) => {
+      setSelectedCategory(option);
+
+      if (option.value === "all") {
+        router.push("/shop-with-sidebar");
+      } else {
+        router.push(
+          `/shop-with-sidebar?category=${encodeURIComponent(option.label)}`,
+        );
+      }
+    },
+    [router],
+  );
+
+  const clearSearchQuery = useCallback(() => {
+    setSearchQuery("");
+    setSearchDropdownOpen(false);
+  }, []);
+
   const toggleNavigation = useCallback(
     () => setNavigationOpen((prev) => !prev),
     [],
@@ -157,6 +179,8 @@ export function useHeaderState() {
       searchRef,
     },
     actions: {
+      handleCategorySelect,
+      clearSearchQuery,
       toggleNavigation,
       toggleMobileSearch,
       toggleUserDropdown,

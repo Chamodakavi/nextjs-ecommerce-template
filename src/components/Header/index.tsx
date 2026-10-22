@@ -64,38 +64,47 @@ const Header = ({ webData }: { webData: WebData | null }) => {
     ];
   }, [categories]);
 
-  // Filtered Products for Predictive Search
+  // Universal Live Search: Searches ALL products across all categories
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const productName = product.name?.toLowerCase() || "";
-      const matchesSearch = productName.includes(
-        state.searchQuery.toLowerCase().trim(),
-      );
+    if (!state.searchQuery.trim()) return [];
 
-      const matchesCategory =
-        state.selectedCategory.value === "all" ||
-        String(product.category) === state.selectedCategory.value ||
-        product.category === state.selectedCategory.label;
+    const query = state.searchQuery.toLowerCase().trim();
+    return products.filter((product) =>
+      product.name?.toLowerCase().includes(query),
+    );
+  }, [products, state.searchQuery]);
 
-      return matchesSearch && matchesCategory;
-    });
-  }, [products, state.searchQuery, state.selectedCategory]);
-
-  // Handlers
+  // Submit Search Form (clears input and navigates)
   const handleSearchSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
       if (!state.searchQuery.trim()) return;
 
-      setters.setSearchDropdownOpen(false);
+      const query = state.searchQuery.trim();
+
+      // Clear input and close dropdowns
+      actions.clearSearchQuery();
+      if (state.mobileSearchOpen) {
+        actions.toggleMobileSearch();
+      }
+
+      // Route parameters
+      const categoryParam =
+        state.selectedCategory.value !== "all"
+          ? `&category=${encodeURIComponent(state.selectedCategory.label)}`
+          : "";
 
       router.push(
-        `/shop-with-sidebar?search=${encodeURIComponent(
-          state.searchQuery.trim(),
-        )}&category=${encodeURIComponent(state.selectedCategory.label)}`,
+        `/shop-with-sidebar?search=${encodeURIComponent(query)}${categoryParam}`,
       );
     },
-    [router, state.searchQuery, state.selectedCategory, setters],
+    [
+      router,
+      state.searchQuery,
+      state.selectedCategory,
+      state.mobileSearchOpen,
+      actions,
+    ],
   );
 
   const handleSearchInputChange = useCallback(
@@ -231,7 +240,7 @@ const Header = ({ webData }: { webData: WebData | null }) => {
                 <CustomSelect
                   options={categoryOptions}
                   selectedOption={state.selectedCategory}
-                  onSelect={setters.setSelectedCategory}
+                  onSelect={actions.handleCategorySelect}
                 />
 
                 <div className="relative w-full">
@@ -259,7 +268,7 @@ const Header = ({ webData }: { webData: WebData | null }) => {
               </div>
             </form>
 
-            {/* Predictive Search Dropdown */}
+            {/* Universal Predictive Search Dropdown */}
             {state.searchDropdownOpen && state.searchQuery.trim() !== "" && (
               <div className="absolute left-0 top-full mt-2 w-full bg-white rounded-lg shadow-xl border border-gray-3 z-50 max-h-80 overflow-y-auto p-2">
                 {filteredProducts.length > 0 ? (
@@ -273,10 +282,7 @@ const Header = ({ webData }: { webData: WebData | null }) => {
                       <Link
                         key={product.id}
                         href={`/shop/${product.id}`}
-                        onClick={() => {
-                          setters.setSearchDropdownOpen(false);
-                          setters.setSearchQuery("");
-                        }}
+                        onClick={actions.clearSearchQuery}
                         className="flex items-center gap-3 p-2 hover:bg-gray-1 rounded-md transition-colors"
                       >
                         <div className="relative w-10 h-10 rounded bg-gray-2 shrink-0 overflow-hidden">
