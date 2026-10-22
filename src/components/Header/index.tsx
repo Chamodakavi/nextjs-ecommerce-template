@@ -5,14 +5,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import CustomSelect, { SelectOption } from "./CustomSelect";
-import { menuData } from "./menuData";
+import { desktopMenuData, mobileMenuData } from "./menuData";
 import Dropdown from "./Dropdown";
 import { useAppSelector } from "@/redux/store";
 import { useSelector } from "react-redux";
 import { selectTotalPrice } from "@/redux/features/cart-slice";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
 import { useAuth } from "@/context/AuthContext";
-import { signOutUser } from "@/lib/supabase/auth";
 
 import { useProducts } from "@/context/ProductContext";
 import { useCatData } from "@/context/WebCatProvider";
@@ -69,17 +68,17 @@ const Header = ({ webData }: { webData: WebData | null }) => {
     ];
   }, [categories]);
 
-  // Universal Live Search: Searches ALL products across all categories
+  // Universal Live Search
   const filteredProducts = useMemo(() => {
     if (!state.searchQuery.trim()) return [];
 
     const query = state.searchQuery.toLowerCase().trim();
     return products.filter((product) =>
-      product.name?.toLowerCase().includes(query),
+      product.name?.toLowerCase().includes(query)
     );
   }, [products, state.searchQuery]);
 
-  // Submit Search Form (clears input and navigates)
+  // Submit Search Form
   const handleSearchSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
@@ -87,20 +86,18 @@ const Header = ({ webData }: { webData: WebData | null }) => {
 
       const query = state.searchQuery.trim();
 
-      // Clear input and close dropdowns
       actions.clearSearchQuery();
       if (state.mobileSearchOpen) {
         actions.toggleMobileSearch();
       }
 
-      // Route parameters
       const categoryParam =
         state.selectedCategory.value !== "all"
           ? `&category=${encodeURIComponent(state.selectedCategory.label)}`
           : "";
 
       router.push(
-        `/shop-with-sidebar?search=${encodeURIComponent(query)}${categoryParam}`,
+        `/shop-with-sidebar?search=${encodeURIComponent(query)}${categoryParam}`
       );
     },
     [
@@ -109,7 +106,7 @@ const Header = ({ webData }: { webData: WebData | null }) => {
       state.selectedCategory,
       state.mobileSearchOpen,
       actions,
-    ],
+    ]
   );
 
   const handleSearchInputChange = useCallback(
@@ -118,7 +115,7 @@ const Header = ({ webData }: { webData: WebData | null }) => {
       setters.setSearchQuery(val);
       setters.setSearchDropdownOpen(val.trim().length > 0);
     },
-    [setters],
+    [setters]
   );
 
   const handleSignOut = useCallback(async () => {
@@ -270,7 +267,7 @@ const Header = ({ webData }: { webData: WebData | null }) => {
               </div>
             </form>
 
-            {/* Universal Predictive Search Dropdown */}
+            {/* Predictive Search Dropdown */}
             {state.searchDropdownOpen && state.searchQuery.trim() !== "" && (
               <div className="absolute left-0 top-full mt-2 w-full bg-white rounded-lg shadow-xl border border-gray-3 z-50 max-h-80 overflow-y-auto p-2">
                 {filteredProducts.length > 0 ? (
@@ -302,7 +299,7 @@ const Header = ({ webData }: { webData: WebData | null }) => {
                           <p className="text-xs font-semibold text-blue">
                             Rs.{" "}
                             {Number(
-                              product.selling_price || 0,
+                              product.selling_price || 0
                             ).toLocaleString()}
                           </p>
                         </div>
@@ -406,28 +403,6 @@ const Header = ({ webData }: { webData: WebData | null }) => {
                   </div>
                 </Link>
               )}
-
-              {/* Cart Button */}
-              <button
-                type="button"
-                onClick={openCartModal}
-                className="flex items-center gap-2.5 group cursor-pointer"
-              >
-                <span className="inline-block relative">
-                  <ShoppingBag className="w-6 h-6 text-blue group-hover:opacity-80 transition-opacity flex-shrink-0" />
-                  <span className="flex items-center justify-center font-medium text-2xs absolute -right-2 -top-2 bg-blue w-4.5 h-4.5 rounded-full text-white">
-                    {cartItems.length}
-                  </span>
-                </span>
-                <div className="text-left">
-                  <span className="block text-2xs text-dark-4 uppercase">
-                    Cart
-                  </span>
-                  <p className="font-medium text-custom-sm text-dark group-hover:text-blue transition-colors">
-                    Rs. {Number(totalPrice || 0).toLocaleString()}
-                  </p>
-                </div>
-              </button>
             </div>
           </div>
         </div>
@@ -445,8 +420,9 @@ const Header = ({ webData }: { webData: WebData | null }) => {
                 }`}
             >
               <nav>
-                <ul className="flex xl:items-center flex-col xl:flex-row gap-4 xl:gap-6">
-                  {menuData.map((menuItem, i) =>
+                {/* Desktop Menu Navigation */}
+                <ul className="hidden xl:flex items-center gap-6">
+                  {desktopMenuData.map((menuItem, i) =>
                     menuItem.submenu ? (
                       <Dropdown
                         key={i}
@@ -458,12 +434,35 @@ const Header = ({ webData }: { webData: WebData | null }) => {
                         <Link
                           href={menuItem.path}
                           onClick={actions.closeNavigation}
-                          className="hover:text-blue text-custom-sm font-medium text-dark block py-1.5 xl:py-4 transition-colors"
+                          className="hover:text-blue text-custom-sm font-medium text-dark block py-4 transition-colors"
                         >
                           {menuItem.title}
                         </Link>
                       </li>
-                    ),
+                    )
+                  )}
+                </ul>
+
+                {/* Mobile Menu Navigation */}
+                <ul className="flex xl:hidden flex-col gap-4">
+                  {mobileMenuData.map((menuItem, i) =>
+                    menuItem.submenu ? (
+                      <Dropdown
+                        key={i}
+                        menuItem={menuItem}
+                        stickyMenu={state.stickyMenu}
+                      />
+                    ) : (
+                      <li key={i}>
+                        <Link
+                          href={menuItem.path}
+                          onClick={actions.closeNavigation}
+                          className="hover:text-blue text-custom-sm font-medium text-dark block py-1.5 transition-colors"
+                        >
+                          {menuItem.title}
+                        </Link>
+                      </li>
+                    )
                   )}
                 </ul>
               </nav>
@@ -471,7 +470,7 @@ const Header = ({ webData }: { webData: WebData | null }) => {
 
             <div className="hidden xl:block">
               <ul className="flex items-center gap-5.5">
-                {/* <li className="py-4">
+                <li className="py-4">
                   <a
                     href="#"
                     className="flex items-center gap-1.5 font-medium text-custom-sm text-dark hover:text-blue transition-colors"
@@ -479,7 +478,7 @@ const Header = ({ webData }: { webData: WebData | null }) => {
                     <History className="w-4 h-4 flex-shrink-0" />
                     Recently Viewed
                   </a>
-                </li> */}
+                </li>
 
                 <li className="py-4">
                   <Link
