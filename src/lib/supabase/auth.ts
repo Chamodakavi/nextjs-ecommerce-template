@@ -23,15 +23,19 @@ export const getSupabaseBrowserClient = () => {
 export async function signInWithGoogle(redirectTo?: string) {
   const supabase = getSupabaseBrowserClient();
 
+  // Always prefer the browser's active window origin (e.g. https://nextjs-ecommerce-template-lilac.vercel.app)
   const origin =
-    typeof window !== "undefined"
+    typeof window !== "undefined" && window.location.origin
       ? window.location.origin
-      : process.env.NEXT_PUBLIC_API_URL || "";
+      : process.env.NEXT_PUBLIC_API_URL ||
+        "https://nextjs-ecommerce-template-lilac.vercel.app";
+
+  const targetRedirect = redirectTo || `${origin}/auth/callback`;
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: redirectTo || `${origin}/auth/callback`,
+      redirectTo: targetRedirect,
     },
   });
 
