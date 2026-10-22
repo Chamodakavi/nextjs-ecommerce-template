@@ -21,6 +21,7 @@ import { NewArrivalProvider } from "@/context/NewArrivalContext";
 import ClientLayout from "@/components/ClientLayout/ClientLayout";
 import { ProductProvider } from "@/context/ProductContext";
 import type { Metadata } from "next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: {
@@ -75,6 +76,7 @@ export default async function RootLayout({
             </WebCountdownProvider>
           </NewArrivalProvider>
         </ProductProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
