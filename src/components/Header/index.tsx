@@ -140,9 +140,8 @@ const Header = ({ webData }: { webData: WebData | null }) => {
 
   return (
     <header
-      className={`fixed left-0 top-0 w-full z-9999 bg-white transition-all ease-in-out duration-300 ${
-        state.stickyMenu ? "shadow-md" : ""
-      }`}
+      className={`fixed left-0 top-0 w-full z-9999 bg-white transition-all ease-in-out duration-300 ${state.stickyMenu ? "shadow-md" : ""
+        }`}
     >
       <div className="max-w-[1170px] mx-auto px-4 sm:px-7.5 xl:px-0">
         {/* Mobile Header Bar */}
@@ -222,9 +221,8 @@ const Header = ({ webData }: { webData: WebData | null }) => {
 
         {/* Desktop Header */}
         <div
-          className={`hidden xl:flex items-center justify-between gap-5 transition-all duration-200 ${
-            state.stickyMenu ? "py-3" : "py-5"
-          }`}
+          className={`hidden xl:flex items-center justify-between gap-5 transition-all duration-200 ${state.stickyMenu ? "py-3" : "py-5"
+            }`}
         >
           <Link href="/" className="flex-shrink-0">
             <Image
@@ -441,11 +439,10 @@ const Header = ({ webData }: { webData: WebData | null }) => {
           <div className="flex items-center justify-between">
             <div
               ref={refs.mobileNavRef}
-              className={`w-full xl:w-auto left-0 top-full xl:static xl:flex items-center justify-between ${
-                state.navigationOpen
+              className={`w-full xl:w-auto left-0 top-full xl:static xl:flex items-center justify-between ${state.navigationOpen
                   ? "block absolute bg-white shadow-lg border-b border-gray-3 p-5 z-50"
                   : "hidden xl:flex"
-              }`}
+                }`}
             >
               <nav>
                 <ul className="flex xl:items-center flex-col xl:flex-row gap-4 xl:gap-6">
@@ -474,7 +471,7 @@ const Header = ({ webData }: { webData: WebData | null }) => {
 
             <div className="hidden xl:block">
               <ul className="flex items-center gap-5.5">
-                <li className="py-4">
+                {/* <li className="py-4">
                   <a
                     href="#"
                     className="flex items-center gap-1.5 font-medium text-custom-sm text-dark hover:text-blue transition-colors"
@@ -482,7 +479,7 @@ const Header = ({ webData }: { webData: WebData | null }) => {
                     <History className="w-4 h-4 flex-shrink-0" />
                     Recently Viewed
                   </a>
-                </li>
+                </li> */}
 
                 <li className="py-4">
                   <Link
