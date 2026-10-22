@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import { ModalProvider } from "@/app/context/QuickViewModalContext";
 import { CartModalProvider } from "@/app/context/CartSidebarModalContext";
 import { ReduxProvider } from "@/redux/provider";
+import { AuthProvider } from "@/context/AuthContext";
 import QuickViewModal from "@/components/Common/QuickViewModal";
 import CartSidebarModal from "@/components/Common/CartSidebarModal";
 import { PreviewSliderProvider } from "@/app/context/PreviewSliderContext";
@@ -28,12 +29,12 @@ export default function ClientLayout({ children, webData }: ClientLayoutProps) {
   }, []);
 
   return (
-    <>
-      {loading ? (
-        <PreLoader />
-      ) : (
-        <>
-          <ReduxProvider>
+    <ReduxProvider>
+      <AuthProvider>
+        {loading ? (
+          <PreLoader />
+        ) : (
+          <>
             <CartModalProvider>
               <ModalProvider>
                 <PreviewSliderProvider>
@@ -45,11 +46,11 @@ export default function ClientLayout({ children, webData }: ClientLayoutProps) {
                 </PreviewSliderProvider>
               </ModalProvider>
             </CartModalProvider>
-          </ReduxProvider>
-          <ScrollToTop />
-          <Footer webData={webData} />
-        </>
-      )}
-    </>
+            <ScrollToTop />
+            <Footer webData={webData} />
+          </>
+        )}
+      </AuthProvider>
+    </ReduxProvider>
   );
 }

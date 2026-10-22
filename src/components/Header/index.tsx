@@ -11,6 +11,7 @@ import { useAppSelector } from "@/redux/store";
 import { useSelector } from "react-redux";
 import { selectTotalPrice } from "@/redux/features/cart-slice";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
+import { useAuth } from "@/context/AuthContext";
 import { signOutUser } from "@/lib/supabase/auth";
 
 import { useProducts } from "@/context/ProductContext";
@@ -48,9 +49,13 @@ const Header = ({ webData }: { webData: WebData | null }) => {
     : [];
   const products: Product[] = Array.isArray(rawProducts) ? rawProducts : [];
 
+  // Auth Context
+  const { signOut } = useAuth();
+
   // Redux & Modal Context
   const { openCartModal } = useCartModalContext();
   const cartItems = useAppSelector((st) => st.cartReducer.items);
+  const wishlistItems = useAppSelector((st) => st.wishlistReducer.items);
   const totalPrice = useSelector(selectTotalPrice);
 
   // Category Options
@@ -117,10 +122,9 @@ const Header = ({ webData }: { webData: WebData | null }) => {
   );
 
   const handleSignOut = useCallback(async () => {
-    await signOutUser();
     setters.setUserDropdownOpen(false);
-    window.location.reload();
-  }, [setters]);
+    await signOut();
+  }, [setters, signOut]);
 
   const displayName =
     state.profile?.full_name ||
@@ -487,6 +491,11 @@ const Header = ({ webData }: { webData: WebData | null }) => {
                   >
                     <Heart className="w-4 h-4 flex-shrink-0" />
                     Wishlist
+                    {wishlistItems.length > 0 && (
+                      <span className="flex items-center justify-center font-bold text-2xs bg-blue text-white w-4 h-4 rounded-full ml-0.5">
+                        {wishlistItems.length}
+                      </span>
+                    )}
                   </Link>
                 </li>
               </ul>

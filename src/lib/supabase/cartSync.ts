@@ -1,53 +1,137 @@
 import { getSupabaseBrowserClient } from "./auth";
 import { store } from "@/redux/store";
 import {
-  addItemToCart,
+  setCartItems,
   removeAllItemsFromCart,
+  addItemToCart,
 } from "@/redux/features/cart-slice";
 
+export type CartItem = {
+  id: number;
+  title: string;
+  price: number;
+  discountedPrice: number;
+  quantity: number;
+  imgs?: {
+    thumbnails: string[];
+    previews: string[];
+  };
+};
+
+let activeCartUserId: string | null = null;
+let isCartHydrating = false;
+let cartDebounceTimeout: NodeJS.Timeout | null = null;
+
+export function setActiveCartUserId(userId: string | null) {
+  activeCartUserId = userId;
+}
+
+export function getActiveCartUserId(): string | null {
+  return activeCartUserId;
+}
+
+export function setIsCartHydrating(val: boolean) {
+  isCartHydrating = val;
+}
+
 /**
- * Sync local Redux cart to Supabase on login, then pull total synced cart back to Redux
+ * Helper to fetch or create the user's cart record in Supabase
  */
-export async function syncReduxCartToSupabase(userId: string) {
+export async function getOrCreateUserCartId(
+  userId: string,
+): Promise<string | null> {
   const supabase = getSupabaseBrowserClient();
-  const localCartItems = store.getState().cartReducer.items;
 
-  // 1. Fetch or create user cart record in Supabase
-  let { data: cart } = await supabase
-    .from("carts")
-    .select("id")
-    .eq("user_id", userId)
-    .maybeSingle();
+  try {
+    const { data: cart, error: selectErr } = await supabase
+      .from("carts")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
 
-  if (!cart) {
-    const { data: newCart, error } = await supabase
+    if (selectErr) {
+      console.error("[CartSync] Error finding cart:", selectErr);
+      return null;
+    }
+
+    if (cart?.id) {
+      return cart.id;
+    }
+
+    const { data: newCart, error: insertErr } = await supabase
       .from("carts")
       .insert({ user_id: userId })
       .select("id")
-      .single();
+      .maybeSingle();
 
-    if (error || !newCart) {
-      console.error("Failed to create database cart:", error);
-      return;
+    if (newCart?.id) {
+      return newCart.id;
     }
-    cart = newCart;
+
+    // Re-check in case of concurrent insert
+    const { data: retryCart } = await supabase
+      .from("carts")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    return retryCart?.id || null;
+  } catch (err) {
+    console.error("[CartSync] Exception in getOrCreateUserCartId:", err);
+    return null;
+  }
+}
+
+/**
+ * Synchronize local Redux cart with Supabase database on login,
+ * merging any guest cart items into the database and hydrating Redux.
+ */
+export async function syncReduxCartToSupabase(userId: string) {
+  setActiveCartUserId(userId);
+  const supabase = getSupabaseBrowserClient();
+  const localCartItems = store.getState().cartReducer.items;
+
+  const cartId = await getOrCreateUserCartId(userId);
+  if (!cartId) {
+    return;
   }
 
-  // 2. Upsert local items to Supabase database
+  // Merge any local guest items into Supabase cart
   if (localCartItems.length > 0) {
+    const { data: existingItems } = await supabase
+      .from("cart_items")
+      .select("id, product_id, quantity")
+      .eq("cart_id", cartId);
+
+    const existingMap = new Map<string, any>(
+      (existingItems || []).map((i: any) => [String(i.product_id), i]),
+    );
+
     for (const item of localCartItems) {
-      await supabase.from("cart_items").upsert(
-        {
-          cart_id: cart.id,
-          product_id: String(item.id),
+      const pId = String(item.id);
+      const existing = existingMap.get(pId);
+
+      if (existing) {
+        // Merge quantities if user already had this item in their account cart
+        const newQty = existing.quantity + item.quantity;
+        await supabase
+          .from("cart_items")
+          .update({
+            quantity: newQty,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id);
+      } else {
+        await supabase.from("cart_items").insert({
+          cart_id: cartId,
+          product_id: pId,
           quantity: item.quantity,
-        },
-        { onConflict: "cart_id, product_id" },
-      );
+        });
+      }
     }
   }
 
-  // 3. Pull database cart items back into Redux for cross-device synchronization
+  // Fetch full unified cart back into Redux
   await fetchSupabaseCartToRedux(userId);
 }
 
@@ -57,106 +141,158 @@ export async function syncReduxCartToSupabase(userId: string) {
 export async function fetchSupabaseCartToRedux(userId: string) {
   const supabase = getSupabaseBrowserClient();
 
-  const { data: cart } = await supabase
+  const cartId = await getOrCreateUserCartId(userId);
+  if (!cartId) {
+    return [];
+  }
+
+  const { data: cart, error } = await supabase
     .from("carts")
     .select("id, cart_items(*)")
-    .eq("user_id", userId)
+    .eq("id", cartId)
     .maybeSingle();
+
+  if (error) {
+    console.error("[CartSync] Error fetching cart items:", error);
+    return [];
+  }
 
   if (cart && cart.cart_items) {
-    store.dispatch(removeAllItemsFromCart());
+    if (cart.cart_items.length === 0) {
+      setIsCartHydrating(true);
+      store.dispatch(setCartItems([]));
+      setIsCartHydrating(false);
+      return [];
+    }
 
+    const productIds = cart.cart_items.map((i: any) => i.product_id);
+    const { data: products } = await supabase
+      .from("products")
+      .select("*")
+      .in("id", productIds);
+
+    const productsMap = new Map<string, any>(
+      (products || []).map((p: any) => [String(p.id), p]),
+    );
+
+    const mappedItems: CartItem[] = [];
     for (const dbItem of cart.cart_items) {
-      const { data: product } = await supabase
-        .from("products")
-        .select("*")
-        .eq("id", dbItem.product_id)
-        .maybeSingle();
-
+      const product = productsMap.get(String(dbItem.product_id));
       if (product) {
-        store.dispatch(
-          addItemToCart({
-            id: Number(product.id),
-            title: product.name,
-            price: product.cost_price || product.selling_price,
-            discountedPrice: product.selling_price,
-            quantity: dbItem.quantity,
-            imgs: {
-              thumbnails: [
-                product.image_url || "/images/product/product-01.jpg",
-              ],
-              previews: [product.image_url || "/images/product/product-01.jpg"],
-            },
-          }),
-        );
+        mappedItems.push({
+          id: Number(product.id),
+          title: product.name,
+          price: Number(product.cost_price || product.selling_price),
+          discountedPrice: Number(product.selling_price),
+          quantity: Number(dbItem.quantity || 1),
+          imgs: {
+            thumbnails: [
+              product.image_url ||
+                (product.image_urls && product.image_urls[0]) ||
+                "/images/products/product-placeholder.png",
+            ],
+            previews:
+              product.image_urls && product.image_urls.length > 0
+                ? product.image_urls
+                : [
+                    product.image_url ||
+                      "/images/products/product-placeholder.png",
+                  ],
+          },
+        });
       }
     }
+
+    setIsCartHydrating(true);
+    store.dispatch(setCartItems(mappedItems));
+    setIsCartHydrating(false);
+    return mappedItems;
   }
+
+  return [];
 }
 
 /**
- * Add or update item in Supabase database cart directly for active logged-in users
+ * Persist the current full Redux cart state to Supabase for the authenticated user
  */
-export async function addOrUpdateDatabaseCartItem(
+export async function persistCartToSupabase(
   userId: string,
-  productId: number | string,
-  quantity: number,
+  items: CartItem[],
 ) {
+  if (isCartHydrating) return;
+  const cartId = await getOrCreateUserCartId(userId);
+  if (!cartId) return;
+
   const supabase = getSupabaseBrowserClient();
 
-  let { data: cart } = await supabase
-    .from("carts")
-    .select("id")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const { data: dbItems, error: fetchErr } = await supabase
+    .from("cart_items")
+    .select("id, product_id, quantity")
+    .eq("cart_id", cartId);
 
-  if (!cart) {
-    const { data: newCart } = await supabase
-      .from("carts")
-      .insert({ user_id: userId })
-      .select("id")
-      .single();
-    cart = newCart;
+  if (fetchErr) {
+    console.error("[CartSync] Error fetching existing cart items:", fetchErr);
+    return;
   }
 
-  if (cart) {
-    await supabase.from("cart_items").upsert(
-      {
-        cart_id: cart.id,
-        product_id: String(productId),
-        quantity: quantity,
-      },
-      { onConflict: "cart_id, product_id" },
-    );
+  const existingMap = new Map<string, any>(
+    (dbItems || []).map((dbItem: any) => [String(dbItem.product_id), dbItem]),
+  );
+
+  // Upsert each item from Redux to Supabase
+  for (const item of items) {
+    const pId = String(item.id);
+    const existing = existingMap.get(pId);
+
+    if (existing) {
+      if (existing.quantity !== item.quantity) {
+        await supabase
+          .from("cart_items")
+          .update({
+            quantity: item.quantity,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id);
+      }
+    } else {
+      await supabase.from("cart_items").insert({
+        cart_id: cartId,
+        product_id: pId,
+        quantity: item.quantity,
+      });
+    }
+  }
+
+  // Delete items from Supabase that were removed from Redux
+  const activeProductIds = new Set(items.map((i) => String(i.id)));
+  const toDelete = (dbItems || []).filter(
+    (dbItem: any) => !activeProductIds.has(String(dbItem.product_id)),
+  );
+
+  if (toDelete.length > 0) {
+    const idsToDelete = toDelete.map((i: any) => i.id);
+    await supabase.from("cart_items").delete().in("id", idsToDelete);
   }
 }
 
 /**
- * Remove item from Supabase database cart directly
+ * Called automatically whenever Redux cart state changes. Debounces DB writes.
  */
-export async function removeDatabaseCartItem(
-  userId: string,
-  productId: number | string,
-) {
-  const supabase = getSupabaseBrowserClient();
+export function onCartStateChanged(items: CartItem[]) {
+  if (isCartHydrating || !activeCartUserId) return;
+  if (cartDebounceTimeout) clearTimeout(cartDebounceTimeout);
 
-  const { data: cart } = await supabase
-    .from("carts")
-    .select("id")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (cart) {
-    await supabase
-      .from("cart_items")
-      .delete()
-      .eq("cart_id", cart.id)
-      .eq("product_id", String(productId));
-  }
+  cartDebounceTimeout = setTimeout(() => {
+    if (activeCartUserId) {
+      persistCartToSupabase(activeCartUserId, items).catch((err) =>
+        console.error("[CartSync] Error persisting cart to Supabase:", err),
+      );
+    }
+  }, 300);
 }
 
 /**
- * Realtime Subscription Listener: Keeps cross-device carts synced instantly
+ * Realtime Subscription: listens for cart_items changes across devices
  */
 export function subscribeToCartChanges(userId: string) {
   const supabase = getSupabaseBrowserClient();
@@ -171,7 +307,9 @@ export function subscribeToCartChanges(userId: string) {
         table: "cart_items",
       },
       () => {
-        fetchSupabaseCartToRedux(userId);
+        if (!isCartHydrating && activeCartUserId === userId) {
+          fetchSupabaseCartToRedux(userId);
+        }
       },
     )
     .subscribe();
@@ -179,4 +317,71 @@ export function subscribeToCartChanges(userId: string) {
   return () => {
     supabase.removeChannel(channel);
   };
+}
+
+/**
+ * Directly add or update an item in Supabase database cart for active logged-in user
+ */
+export async function addOrUpdateDatabaseCartItem(
+  userId: string,
+  productId: number | string,
+  quantity: number,
+) {
+  const cartId = await getOrCreateUserCartId(userId);
+  if (!cartId) return;
+
+  const supabase = getSupabaseBrowserClient();
+  const pId = String(productId);
+
+  const { data: existing } = await supabase
+    .from("cart_items")
+    .select("id, quantity")
+    .eq("cart_id", cartId)
+    .eq("product_id", pId)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase
+      .from("cart_items")
+      .update({
+        quantity: quantity,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id);
+  } else {
+    await supabase.from("cart_items").insert({
+      cart_id: cartId,
+      product_id: pId,
+      quantity: quantity,
+    });
+  }
+}
+
+/**
+ * Directly remove item from Supabase database cart
+ */
+export async function removeDatabaseCartItem(
+  userId: string,
+  productId: number | string,
+) {
+  const cartId = await getOrCreateUserCartId(userId);
+  if (!cartId) return;
+
+  const supabase = getSupabaseBrowserClient();
+  await supabase
+    .from("cart_items")
+    .delete()
+    .eq("cart_id", cartId)
+    .eq("product_id", String(productId));
+}
+
+/**
+ * Clears all items from the user's database cart in Supabase
+ */
+export async function clearDatabaseCart(userId: string) {
+  const cartId = await getOrCreateUserCartId(userId);
+  if (!cartId) return;
+
+  const supabase = getSupabaseBrowserClient();
+  await supabase.from("cart_items").delete().eq("cart_id", cartId);
 }
