@@ -273,7 +273,7 @@ const ShopWithSidebarContent = () => {
                 <div
                   className={
                     productStyle === "grid"
-                      ? "grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-x-5 md:gap-y-9 lg:grid-cols-3"
+                      ? "grid grid-cols-3 gap-4 sm:grid-cols-2 md:gap-x-5 md:gap-y-9 lg:grid-cols-3"
                       : "flex flex-col gap-7.5"
                   }
                 >
