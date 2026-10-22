@@ -20,12 +20,18 @@ export const getSupabaseBrowserClient = () => {
 /**
  * Initiates Google OAuth Sign In flow
  */
-export async function signInWithGoogle() {
+export async function signInWithGoogle(redirectTo?: string) {
   const supabase = getSupabaseBrowserClient();
+
+  const origin =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_API_URL || "";
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: redirectTo || `${origin}/auth/callback`,
     },
   });
 
